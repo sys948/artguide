@@ -3,33 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Art Guide - Twinkling Globe</title>
+  <title>Art Guide - Sparkling Stars</title>
   <style>
     body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Pretendard', sans-serif; }
     #title-overlay {
       position: absolute; top: 20px; left: 20px; color: white;
-      z-index: 10; pointer-events: none; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      z-index: 10; pointer-events: none; text-shadow: 2px 2px 8px rgba(0, 242, 255, 0.8);
     }
-    /* 팝업 창 스타일 */
     .scene-tooltip {
-      background: rgba(10, 10, 10, 0.95) !important;
-      border: 1px solid #00f2ff !important;
-      border-radius: 8px !important;
+      background: rgba(0, 5, 10, 0.95) !important;
+      border: 1px solid #fff !important;
+      border-radius: 4px !important;
       padding: 12px !important;
-      box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
     }
     .tooltip-content { width: 220px; color: #fff; pointer-events: none; }
-    .tooltip-content b { font-size: 16px; color: #ffeb3b; display: block; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
-    .exhibit-info { font-size: 13px; color: #eee; line-height: 1.5; }
-    .exhibit-info strong { color: #00f2ff; font-weight: normal; }
-    .lat-lng { font-size: 10px; color: #666; margin-top: 10px; font-family: monospace; }
+    .tooltip-content b { font-size: 16px; color: #00f2ff; display: block; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+    .exhibit-info { font-size: 13px; color: #fff; line-height: 1.5; }
+    .lat-lng { font-size: 10px; color: #888; margin-top: 10px; font-family: monospace; }
   </style>
 </head>
 <body>
 
   <div id="title-overlay">
     <h1>Art Guide Globe</h1>
-    <p>전 세계 50개 주요 미술 공간 (2026. 04. 16.)</p>
+    <p>실시간으로 강렬하게 반짝이는 50개의 아트 스페이스</p>
   </div>
 
   <div id="globeViz"></div>
@@ -37,6 +35,7 @@
   <script src="//unpkg.com/globe.gl"></script>
 
   <script>
+    // 각 점에 무작위성을 부여하기 위해 randomPhase 속성을 추가합니다.
     const museumData = [
       { name: "국립현대미술관 서울", lat: 37.5791, lng: 126.9805, url: "https://www.mmca.go.kr/", exhibition: "미래의 역사: 기술과 인간" },
       { name: "리움미술관", lat: 37.5384, lng: 127.0024, url: "https://www.leeum.org/", exhibition: "고미술의 재발견: 금속공예" },
@@ -77,7 +76,7 @@
       { name: "멕시코 국립인류학박물관", lat: 19.4260, lng: -99.1862, url: "https://www.mna.inah.gob.mx/", exhibition: "아즈텍의 태양석" },
       { name: "이집트 대박물관", lat: 29.9950, lng: 31.1290, url: "https://visit-gem.com/", exhibition: "투탕카멘의 황금 마스크" },
       { name: "루브르 아부다비", lat: 24.5330, lng: 54.3980, url: "https://www.louvreabudhabi.ae/", exhibition: "동서양의 만남" }
-    ];
+    ].map(d => ({ ...d, phase: Math.random() * Math.PI * 2, speed: 0.1 + Math.random() * 0.2 }));
 
     const world = Globe()
       (document.getElementById('globeViz'))
@@ -85,16 +84,12 @@
       .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
       .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
       
-      // --- 반짝이는 점 설정 ---
       .pointsData(museumData)
       .pointLat('lat')
       .pointLng('lng')
-      .pointColor(() => '#00f2ff')
-      .pointRadius(0.3) // 요청하신 대로 매우 작게 설정
-      .pointAltitude(0.01) // 지구본 표면에서 살짝 띄워 가려짐 방지
-      
-      // 깜빡이는 효과를 위한 애니메이션 설정
-      .pointsMerge(false) // 개별 애니메이션 가능하게 설정
+      .pointRadius(0.25) // 초미세 크기 유지
+      .pointAltitude(0.015)
+      .pointsMerge(false)
       
       .pointLabel(d => `
         <div class="scene-tooltip">
@@ -112,14 +107,23 @@
       `)
       .onPointClick(d => window.open(d.url, '_blank'));
 
-    // --- 애니메이션 로직 ---
-    let colorTick = 0;
-    setInterval(() => {
-      colorTick++;
-      // 점의 투명도를 조절하여 깜빡이는 효과 구현
-      const opacity = Math.abs(Math.sin(colorTick / 10)) * 0.7 + 0.3;
-      world.pointColor(() => `rgba(0, 242, 255, ${opacity})`);
-    }, 50);
+    // --- 초고속 무작위 반짝임 로직 ---
+    let frame = 0;
+    function animate() {
+      frame += 1;
+      world.pointColor(d => {
+        // 각 점의 고유 위상(phase)과 속도(speed)를 사용하여 무작위성 부여
+        const brightness = Math.sin(frame * d.speed + d.phase);
+        // 밝기가 높을 때는 순백색(#FFFFFF), 낮을 때는 사이언색(#00f2ff)으로 변하며 투명도 조절
+        const alpha = Math.max(0.2, (brightness + 1) / 2);
+        const r = Math.floor(200 * alpha + 55); // 하얗게 보이기 위해 R, G 값을 높임
+        const g = 255;
+        const b = 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      });
+      requestAnimationFrame(animate);
+    }
+    animate();
 
     world.controls().autoRotate = true;
     world.controls().autoRotateSpeed = 0.5;
