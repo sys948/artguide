@@ -3,20 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Art Guide - World Museum Globe</title>
+  <title>Art Guide - Interactive Globe</title>
   <style>
-    body { margin: 0; background-color: #000; overflow: hidden; font-family: sans-serif; }
+    body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Pretendard', sans-serif; }
     #title-overlay {
       position: absolute; top: 20px; left: 20px; color: white;
-      z-index: 10; pointer-events: none;
+      z-index: 10; pointer-events: none; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
+    /* 마우스 올렸을 때 뜨는 팝업 스타일 */
+    .scene-tooltip {
+      color: #fff !important;
+      background: rgba(0, 0, 0, 0.8) !important;
+      padding: 10px !important;
+      border-radius: 8px !important;
+      border: 1px solid #555 !important;
+      font-size: 14px !important;
+      line-height: 1.5 !important;
+    }
+    .scene-tooltip b { color: #ffeb3b; display: block; margin-bottom: 5px; font-size: 16px; }
   </style>
 </head>
 <body>
 
   <div id="title-overlay">
     <h1>Art Guide Globe</h1>
-    <p>전 세계 미술관과 갤러리를 탐험하세요.</p>
+    <p>점을 클릭하면 해당 미술관 홈페이지로 이동합니다.</p>
   </div>
 
   <div id="globeViz"></div>
@@ -24,42 +35,40 @@
   <script src="//unpkg.com/globe.gl"></script>
 
   <script>
-    // 1. 미술관 데이터 (위도 lat, 경도 lng)
-    // 나중에 여기에 데이터를 계속 추가하시면 됩니다!
+    // 1. 데이터에 'url' 항목을 추가했습니다.
     const museumData = [
-      { name: "루브르 박물관 (프랑스)", lat: 48.8606, lng: 2.3376, color: 'red', size: 0.5 },
-      { name: "메트로폴리탄 미술관 (미국)", lat: 40.7794, lng: -73.9632, color: 'red', size: 0.5 },
-      { name: "대영 박물관 (영국)", lat: 51.5194, lng: -0.1270, color: 'red', size: 0.5 },
-      { name: "국립현대미술관 (한국)", lat: 37.5791, lng: 126.9805, color: 'blue', size: 0.5 },
-      { name: "구겐하임 빌바오 (스페인)", lat: 43.2685, lng: -2.9340, color: 'red', size: 0.5 },
-      { name: "도쿄 국립 박물관 (일본)", lat: 35.7189, lng: 139.7764, color: 'red', size: 0.5 },
-      { name: "바티칸 미술관 (바티칸)", lat: 41.9065, lng: 12.4536, color: 'red', size: 0.5 }
+      { name: "루브르 박물관", country: "프랑스", lat: 48.8606, lng: 2.3376, url: "https://www.louvre.fr/en" },
+      { name: "메트로폴리탄 미술관", country: "미국", lat: 40.7794, lng: -73.9632, url: "https://www.metmuseum.org/" },
+      { name: "대영 박물관", country: "영국", lat: 51.5194, lng: -0.1270, url: "https://www.britishmuseum.org/" },
+      { name: "국립현대미술관", country: "한국", lat: 37.5791, lng: 126.9805, url: "https://www.mmca.go.kr/" },
+      { name: "구겐하임 빌바오", country: "스페인", lat: 43.2685, lng: -2.9340, url: "https://www.guggenheim-bilbao.eus/" },
+      { name: "도쿄 국립 박물관", country: "일본", lat: 35.7189, lng: 139.7764, url: "https://www.tnm.jp/" },
+      { name: "바티칸 미술관", country: "바티칸", lat: 41.9065, lng: 12.4536, url: "https://www.museivaticani.va/" }
     ];
 
-    // 2. 지구본 설정
     const world = Globe()
       (document.getElementById('globeViz'))
-      // 지구본 이미지 설정 (고화질)
       .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
       .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
       .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
       
-      // 데이터 포인트 설정
       .pointsData(museumData)
       .pointLat('lat')
       .pointLng('lng')
-      .pointColor('color')
-      .pointRadius('size')
-      .pointLabel('name') // 마우스 올리면 이름 표시
+      .pointColor(() => '#ff3e3e')
+      .pointRadius(0.6)
+      .pointAltitude(0.02)
       
-      // 부드러운 애니메이션
-      .pointAltitude(0.1)
-      .pointsMerge(true);
-
-    // 3. 자동 회전 설정
-    world.controls().autoRotate = true;
-    world.controls().autoRotateSpeed = 0.5;
-
-  </script>
-</body>
-</html>
+      // 2. 마우스 올렸을 때 정보 표시 (HTML 형식으로 커스텀)
+      .pointLabel(d => `
+        <div style="text-align: left;">
+          <b>${d.name} (${d.country})</b>
+          위도(Lat): ${d.lat}<br/>
+          경도(Lng): ${d.lng}<br/>
+          <span style="color: #4db6ac; font-size: 12px;">주소: ${d.url}</span>
+        </div>
+      `)
+      
+      // 3. 클릭 시 해당 URL로 새 탭에서 열기
+      .onPointClick(d => {
+        window.
