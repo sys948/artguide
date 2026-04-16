@@ -42,24 +42,26 @@
     // 1. 데이터에 이미지(img)와 현재 전시 정보(exhibition)를 추가했습니다.
     // * 이미지 URL은 실제 이미지 주소로 바꾸시면 더 멋지게 나옵니다.
     const museumData = [
-      { 
-        name: "루브르 박물관", country: "프랑스", lat: 48.8606, lng: 2.3376, 
-        url: "https://www.louvre.fr/en",
-        img: "https://images.unsplash.com/photo-1597916829826-02e5bb0a54e0?auto=format&fit=crop&w=300&q=80",
-        exhibition: "모나리자와 레오나르도 다빈치 전"
-      },
-      { 
-        name: "국립현대미술관", country: "한국", lat: 37.5791, lng: 126.9805, 
-        url: "https://www.mmca.go.kr/",
-        img: "https://images.unsplash.com/photo-1561839561-b13bcfe95249?auto=format&fit=crop&w=300&q=80",
-        exhibition: "이건희 컬렉션 특별전"
-      },
-      { 
-        name: "메트로폴리탄 미술관", country: "미국", lat: 40.7794, lng: -73.9632, 
-        url: "https://www.metmuseum.org/",
-        img: "https://images.unsplash.com/photo-1518998053574-53f1f61f93e3?auto=format&fit=crop&w=300&q=80",
-        exhibition: "슬리핑 뷰티: 패션의 재조명"
-      }
+  { 
+    name: "국립현대미술관 (MMCA)",
+    country: "한국",
+    lat: 37.5791,
+    lng: 126.9805, 
+    url: "https://www.mmca.go.kr/",
+    // 미술관 홈페이지에서 복사한 전시 포스터 이미지 주소
+    img: "https://www.mmca.go.kr/upload/exhibition/2026/01/poster_image.jpg", 
+    exhibition: "2026 한국 현대미술 특별전: 미래의 눈"
+  },
+  {
+    name: "루브르 박물관",
+    country: "프랑스",
+    lat: 48.8606,
+    lng: 2.3376,
+    url: "https://www.louvre.fr/en/exhibitions",
+    img: "https://www.louvre.fr/sites/default/files/exhibitions/2026_exhibition_hero.jpg",
+    exhibition: "르네상스 거장들의 미공개 소묘전"
+  }
+];
       // 다른 미술관들도 위와 같은 형식으로 추가해 주세요!
     ];
 
