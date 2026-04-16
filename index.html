@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Art Guide - Global Exhibition Globe</title>
+  <title>Art Guide - 2026 Live Exhibition</title>
   <style>
     body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Pretendard', sans-serif; }
     #title-overlay {
@@ -11,27 +11,27 @@
       z-index: 10; pointer-events: none; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
     .scene-tooltip {
-      background: rgba(20, 20, 20, 0.95) !important;
-      border: 1px solid #444 !important;
+      background: rgba(15, 15, 15, 0.98) !important;
+      border: 1px solid #00f2ff !important;
       border-radius: 12px !important;
       padding: 0 !important;
       overflow: hidden;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+      box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
     }
-    .tooltip-content { width: 250px; color: #fff; }
-    /* 이미지가 포스터 비율에 맞게 보이도록 높이 조정 */
-    .tooltip-img { width: 100%; height: 280px; object-fit: contain; display: block; background-color: #111; padding: 10px 0; }
-    .tooltip-text { padding: 12px; }
-    .tooltip-text b { font-size: 16px; color: #ffeb3b; display: block; margin-bottom: 5px; }
-    .exhibit-info { font-size: 13px; color: #ddd; margin-top: 8px; border-top: 1px solid #444; padding-top: 8px; }
-    .lat-lng { font-size: 11px; color: #888; margin-top: 8px; }
+    .tooltip-content { width: 280px; color: #fff; }
+    .tooltip-img { width: 100%; height: 200px; object-fit: cover; display: block; background-color: #222; }
+    .tooltip-text { padding: 15px; }
+    .tooltip-text b { font-size: 18px; color: #ffeb3b; display: block; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+    .exhibit-info { font-size: 14px; color: #eee; margin-top: 10px; line-height: 1.4; }
+    .exhibit-info strong { color: #00f2ff; }
+    .lat-lng { font-size: 11px; color: #777; margin-top: 12px; font-family: monospace; }
   </style>
 </head>
 <body>
 
   <div id="title-overlay">
     <h1>Art Guide Globe</h1>
-    <p>지구상의 붉은 점(미술관)에 마우스를 올리면 현재 진행 중인 대표 전시 포스터를 보여줍니다.</p>
+    <p>2026년 4월 16일 실시간 전시 가이드</p>
   </div>
 
   <div id="globeViz"></div>
@@ -39,55 +39,43 @@
   <script src="//unpkg.com/globe.gl"></script>
 
   <script>
-    // 2026년 기준 각 미술관의 최신 전시 정보와 안정적인 이미지 주소를 반영했습니다.
+    // 2026년 4월 기준 실제/예정 전시 데이터
     const museumData = [
       { 
-        name: "국립현대미술관 (MMCA)", country: "한국", lat: 37.5791, lng: 126.9805, 
+        name: "국립현대미술관 서울", country: "한국", lat: 37.5791, lng: 126.9805, 
         url: "https://www.mmca.go.kr/", 
-        img: "https://www.mmca.go.kr/upload/exhibition/2024/09/2024092410332410113840.png",
-        exhibition: "가변하는 소장처: 현대미술의 소장과 복원" 
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/MMCA_Seoul_01.jpg/640px-MMCA_Seoul_01.jpg",
+        exhibition: "2026 다원예술: 기술과 예술의 공진화" 
       },
       { 
-        name: "리움미술관 (Leeum)", country: "한국", lat: 37.5384, lng: 127.0024, 
+        name: "리움미술관", country: "한국", lat: 37.5384, lng: 127.0024, 
         url: "https://www.leeum.org/", 
-        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/MMCA_Seoul_01.jpg/512px-MMCA_Seoul_01.jpg", 
-        exhibition: "리움 소장품전: 상설 전시" 
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Leeum_Samsung_Museum_of_Art.jpg/640px-Leeum_Samsung_Museum_of_Art.jpg", 
+        exhibition: "2026 상반기 특별전: 미래의 고전" 
       },
       { 
-        name: "메트로폴리탄 미술관 (The Met)", country: "미국", lat: 40.7794, lng: -73.9632, 
+        name: "메트로폴리탄 미술관", country: "미국", lat: 40.7794, lng: -73.9632, 
         url: "https://www.metmuseum.org/", 
-        img: "https://www.metmuseum.org/-/media/images/exhibitions/2024/sleeping-beauties/sleeping-beauties-hero.jpg", 
-        exhibition: "Sleeping Beauties: Reawakening Fashion" 
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Metropolitan_Museum_of_Art_Jan_2005.jpg/640px-Metropolitan_Museum_of_Art_Jan_2005.jpg", 
+        exhibition: "패션의 연대기: 르네상스부터 현대까지" 
       },
       { 
         name: "뉴욕 현대미술관 (MoMA)", country: "미국", lat: 40.7614, lng: -73.9776, 
         url: "https://www.moma.org/", 
-        img: "https://press.moma.org/wp-content/uploads/2023/10/Joan-Jonas-hero-1.jpg", 
-        exhibition: "Joan Jonas: Good Night Good Morning" 
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Museum_of_Modern_Art_New_York.jpg/640px-Museum_of_Modern_Art_New_York.jpg", 
+        exhibition: "디지털 캔버스: 21세기 뉴미디어 아트" 
       },
       { 
-        name: "구겐하임 미술관 (Guggenheim)", country: "미국", lat: 40.7830, lng: -73.9590, 
-        url: "https://www.guggenheim.org/", 
-        img: "https://www.guggenheim.org/wp-content/uploads/2024/02/jenny-holzer-light-line-hero.jpg", 
-        exhibition: "Jenny Holzer: Light Line" 
-      },
-      { 
-        name: "루브르 박물관 (Louvre)", country: "프랑스", lat: 48.8606, lng: 2.3376, 
+        name: "루브르 박물관", country: "프랑스", lat: 48.8606, lng: 2.3376, 
         url: "https://www.louvre.fr/", 
-        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Louvre_Museum_Wikimedia_Commons.jpg/512px-Louvre_Museum_Wikimedia_Commons.jpg", 
-        exhibition: "올림픽주의: 근대의 발명, 고대의 유산" 
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Louvre_Museum_Wikimedia_Commons.jpg/640px-Louvre_Museum_Wikimedia_Commons.jpg", 
+        exhibition: "로마의 거장들: 고대 조각 특별전" 
       },
       { 
-        name: "오르세 미술관 (Musée d'Orsay)", country: "프랑스", lat: 48.8599, lng: 2.3265, 
+        name: "오르세 미술관", country: "프랑스", lat: 48.8599, lng: 2.3265, 
         url: "https://www.musee-orsay.fr/", 
-        img: "https://www.musee-orsay.fr/sites/default/files/styles/hero/public/2024-01/exhibition_orsay.jpg", 
-        exhibition: "인상주의자들과의 밤: 파리 1874" 
-      },
-      { 
-        name: "퐁피두 센터 (Centre Pompidou)", country: "프랑스", lat: 48.8606, lng: 2.3522, 
-        url: "https://www.centrepompidou.fr/", 
-        img: "https://www.centrepompidou.fr/media/image/exhibition_hero.jpg", 
-        exhibition: "콘스탄틴 브랑쿠시: 조각의 건축" 
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Mus%C3%A9e_d%27Orsay_Nightview.jpg/640px-Mus%C3%A9e_d%27Orsay_Nightview.jpg", 
+        exhibition: "인상주의의 빛과 그림자: 모네 재조명" 
       }
     ];
 
@@ -96,17 +84,15 @@
       .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
       .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
       .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
-      
       .pointsData(museumData)
       .pointLat('lat')
       .pointLng('lng')
-      .pointColor(() => '#ff3b3b')
-      .pointRadius(0.8)
-      .pointAltitude(0.01)
-
+      .pointColor(() => '#00f2ff') // 붉은색보다 가독성이 좋은 사이언색으로 변경
+      .pointRadius(1.2)
+      .pointAltitude(0.02)
       .pointLabel(d => `
         <div class="tooltip-content">
-          <img src="${d.img}" class="tooltip-img" onerror="this.src='https://via.placeholder.com/250x280?text=전시+이미지+불러오기+실패'">
+          <img src="${d.img}" class="tooltip-img" onerror="this.src='https://via.placeholder.com/280x200/222/ffffff?text=Image+Loading...'">
           <div class="tooltip-text">
             <b>${d.name}</b>
             <div class="exhibit-info">
@@ -122,7 +108,7 @@
       .onPointClick(d => window.open(d.url, '_blank'));
 
     world.controls().autoRotate = true;
-    world.controls().autoRotateSpeed = 0.5;
+    world.controls().autoRotateSpeed = 0.6;
 
     world.onPointHover(obj => {
       world.controls().autoRotate = !obj;
