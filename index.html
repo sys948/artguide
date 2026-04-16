@@ -3,24 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Art Guide - Interactive Experience</title>
+  <title>Art Guide - World Museum Globe</title>
   <style>
     body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Pretendard', sans-serif; }
     #title-overlay {
       position: absolute; top: 20px; left: 20px; color: white;
       z-index: 10; pointer-events: none; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
-    /* 팝업 창 스타일 커스텀 */
     .scene-tooltip {
       background: rgba(20, 20, 20, 0.95) !important;
       border: 1px solid #444 !important;
       border-radius: 12px !important;
-      padding: 0 !important; /* 내부 여백은 아래 content에서 조절 */
+      padding: 0 !important;
       overflow: hidden;
       box-shadow: 0 10px 20px rgba(0,0,0,0.5);
     }
     .tooltip-content { width: 250px; color: #fff; }
-    .tooltip-img { width: 100%; height: 140px; object-fit: cover; display: block; }
+    .tooltip-img { width: 100%; height: 140px; object-fit: cover; display: block; background-color: #222; }
     .tooltip-text { padding: 12px; }
     .tooltip-text b { font-size: 16px; color: #ffeb3b; display: block; margin-bottom: 5px; }
     .exhibit-info { font-size: 13px; color: #ddd; margin-top: 8px; border-top: 1px solid #444; padding-top: 8px; }
@@ -39,76 +38,70 @@
   <script src="//unpkg.com/globe.gl"></script>
 
   <script>
-    // 1. 데이터에 이미지(img)와 현재 전시 정보(exhibition)를 추가했습니다.
-    // * 이미지 URL은 실제 이미지 주소로 바꾸시면 더 멋지게 나옵니다.
- const museumData = [
-  // --- 서울 (SEOUL) ---
-  { 
-    name: "국립현대미술관 (MMCA)", country: "한국", lat: 37.5791, lng: 126.9805, 
-    url: "https://www.mmca.go.kr/exhibitions/progressList.do",
-    img: "https://www.mmca.go.kr/upload/exhibition/2024/09/2024092410332410113840.png", // 예시 이미지
-    exhibition: "가변하는 소장처: 현대미술의 소장과 복원"
-  },
-  { 
-    name: "리움미술관 (Leeum)", country: "한국", lat: 37.5384, lng: 127.0024, 
-    url: "https://www.leeum.org/exhibition/current.asp",
-    img: "https://www.leeum.org/upload/exhibition/202402/20240214102235.jpg",
-    exhibition: "리움 소장품전: 고미술 & 현대미술"
-  },
-  { 
-    name: "서울시립미술관 (SeMA)", country: "한국", lat: 37.5641, lng: 126.9738, 
-    url: "https://sema.seoul.go.kr/kr/whatson/exhibition",
-    img: "https://sema.seoul.go.kr/upload/exhibition/2024/main_img.jpg",
-    exhibition: "에드워드 호퍼: 길 위에서 (예시)"
-  },
-
-  // --- 뉴욕 (NEW YORK) ---
-  { 
-    name: "메트로폴리탄 미술관 (The Met)", country: "미국", lat: 40.7794, lng: -73.9632, 
-    url: "https://www.metmuseum.org/exhibitions",
-    img: "https://www.metmuseum.org/-/media/images/exhibitions/2024/sleeping-beauties/sleeping-beauties-hero.jpg",
-    exhibition: "Sleeping Beauties: Reawakening Fashion"
-  },
-  { 
-    name: "뉴욕 현대미술관 (MoMA)", country: "미국", lat: 40.7614, lng: -73.9776, 
-    url: "https://www.moma.org/calendar/exhibitions",
-    img: "https://www.moma.org/d/assets/W1siZiIsIjIwMjQvMDIvMDcvN2o4cnh6cjZ2al9Nb01BX0V4aGliaXRpb25fSGVyby5qcGciXV0/MoMA_Exhibition_Hero.jpg",
-    exhibition: "Joan Jonas: Good Night Good Morning"
-  },
-  { 
-    name: "구겐하임 미술관 (Guggenheim)", country: "미국", lat: 40.7830, lng: -73.9590, 
-    url: "https://www.guggenheim.org/exhibitions",
-    img: "https://www.guggenheim.org/wp-content/uploads/2024/02/exhibition-hero.jpg",
-    exhibition: "Jenny Holzer: Light Line"
-  },
-  { 
-    name: "휘트니 미술관 (Whitney)", country: "미국", lat: 40.7396, lng: -74.0088, 
-    url: "https://whitney.org/exhibitions",
-    img: "https://whitney.org/uploads/exhibition/image/1234/hero.jpg",
-    exhibition: "Whitney Biennial 2026: Even Better Than the Real Thing"
-  },
-
-  // --- 파리 (PARIS) ---
-  { 
-    name: "루브르 박물관 (Louvre)", country: "프랑스", lat: 48.8606, lng: 2.3376, 
-    url: "https://www.louvre.fr/en/exhibitions-and-events",
-    img: "https://www.louvre.fr/sites/default/files/exhibitions/2024_exhibition.jpg",
-    exhibition: "Olympism: A Modern Invention, an Ancient Heritage"
-  },
-  { 
-    name: "오르세 미술관 (Musée d'Orsay)", country: "프랑스", lat: 48.8599, lng: 2.3265, 
-    url: "https://www.musee-orsay.fr/en/exhibitions",
-    img: "https://www.musee-orsay.fr/sites/default/files/styles/hero/public/2024-01/exhibition_orsay.jpg",
-    exhibition: "Tonight with the Impressionists Paris 1874"
-  },
-  { 
-    name: "퐁피두 센터 (Centre Pompidou)", country: "프랑스", lat: 48.8606, lng: 2.3522, 
-    url: "https://www.centrepompidou.fr/en/what-on/exhibitions",
-    img: "https://www.centrepompidou.fr/media/image/exhibition_hero.jpg",
-    exhibition: "Constantin Brancusi: The Sculpture of Architecture"
-  }
-];
-      // 다른 미술관들도 위와 같은 형식으로 추가해 주세요!
+    const museumData = [
+      // --- 서울 (SEOUL) ---
+      { 
+        name: "국립현대미술관 (MMCA)", country: "한국", lat: 37.5791, lng: 126.9805, 
+        url: "https://www.mmca.go.kr/exhibitions/progressList.do",
+        img: "https://www.mmca.go.kr/upload/exhibition/2024/09/2024092410332410113840.png",
+        exhibition: "가변하는 소장처: 현대미술의 소장과 복원"
+      },
+      { 
+        name: "리움미술관 (Leeum)", country: "한국", lat: 37.5384, lng: 127.0024, 
+        url: "https://www.leeum.org/exhibition/current.asp",
+        img: "https://www.leeum.org/upload/exhibition/202402/20240214102235.jpg",
+        exhibition: "리움 소장품전: 고미술 & 현대미술"
+      },
+      { 
+        name: "서울시립미술관 (SeMA)", country: "한국", lat: 37.5641, lng: 126.9738, 
+        url: "https://sema.seoul.go.kr/kr/whatson/exhibition",
+        img: "https://sema.seoul.go.kr/upload/exhibition/2024/main_img.jpg",
+        exhibition: "에드워드 호퍼: 길 위에서"
+      },
+      // --- 뉴욕 (NEW YORK) ---
+      { 
+        name: "메트로폴리탄 미술관 (The Met)", country: "미국", lat: 40.7794, lng: -73.9632, 
+        url: "https://www.metmuseum.org/exhibitions",
+        img: "https://www.metmuseum.org/-/media/images/exhibitions/2024/sleeping-beauties/sleeping-beauties-hero.jpg",
+        exhibition: "Sleeping Beauties: Reawakening Fashion"
+      },
+      { 
+        name: "뉴욕 현대미술관 (MoMA)", country: "미국", lat: 40.7614, lng: -73.9776, 
+        url: "https://www.moma.org/calendar/exhibitions",
+        img: "https://www.moma.org/d/assets/W1siZiIsIjIwMjQvMDIvMDcvN2o4cnh6cjZ2al9Nb01BX0V4aGliaXRpb25fSGVyby5qcGciXV0/MoMA_Exhibition_Hero.jpg",
+        exhibition: "Joan Jonas: Good Night Good Morning"
+      },
+      { 
+        name: "구겐하임 미술관 (Guggenheim)", country: "미국", lat: 40.7830, lng: -73.9590, 
+        url: "https://www.guggenheim.org/exhibitions",
+        img: "https://www.guggenheim.org/wp-content/uploads/2024/02/exhibition-hero.jpg",
+        exhibition: "Jenny Holzer: Light Line"
+      },
+      { 
+        name: "휘트니 미술관 (Whitney)", country: "미국", lat: 40.7396, lng: -74.0088, 
+        url: "https://whitney.org/exhibitions",
+        img: "https://whitney.org/uploads/exhibition/image/1234/hero.jpg",
+        exhibition: "Whitney Biennial 2026: Even Better Than the Real Thing"
+      },
+      // --- 파리 (PARIS) ---
+      { 
+        name: "루브르 박물관 (Louvre)", country: "프랑스", lat: 48.8606, lng: 2.3376, 
+        url: "https://www.louvre.fr/en/exhibitions-and-events",
+        img: "https://www.louvre.fr/sites/default/files/exhibitions/2024_exhibition.jpg",
+        exhibition: "Olympism: A Modern Invention, an Ancient Heritage"
+      },
+      { 
+        name: "오르세 미술관 (Musée d'Orsay)", country: "프랑스", lat: 48.8599, lng: 2.3265, 
+        url: "https://www.musee-orsay.fr/en/exhibitions",
+        img: "https://www.musee-orsay.fr/sites/default/files/styles/hero/public/2024-01/exhibition_orsay.jpg",
+        exhibition: "Tonight with the Impressionists Paris 1874"
+      },
+      { 
+        name: "퐁피두 센터 (Centre Pompidou)", country: "프랑스", lat: 48.8606, lng: 2.3522, 
+        url: "https://www.centrepompidou.fr/en/what-on/exhibitions",
+        img: "https://www.centrepompidou.fr/media/image/exhibition_hero.jpg",
+        exhibition: "Constantin Brancusi: The Sculpture of Architecture"
+      }
     ];
 
     const world = Globe()
@@ -122,11 +115,9 @@
       .pointColor(() => '#00f2ff')
       .pointRadius(0.7)
       .pointAltitude(0.03)
-      
-      // 2. 마우스 오버 시 풍부한 HTML 팝업 표시
       .pointLabel(d => `
         <div class="tooltip-content">
-          <img src="${d.img}" class="tooltip-img">
+          <img src="${d.img}" class="tooltip-img" onerror="this.src='https://via.placeholder.com/250x140?text=No+Image'">
           <div class="tooltip-text">
             <b>${d.name}</b>
             <div class="exhibit-info">
@@ -141,19 +132,13 @@
       `)
       .onPointClick(d => window.open(d.url, '_blank'));
 
-    // 자동 회전 초기값
     world.controls().autoRotate = true;
     world.controls().autoRotateSpeed = 0.5;
 
-    // 3. 핵심: 마우스를 올렸을 때 회전 멈춤/재개 제어
     world.onPointHover(obj => {
-      // 마우스를 올리면(obj가 존재하면) 회전 정지, 아니면 다시 시작
       world.controls().autoRotate = !obj;
-      
-      // 커서 모양 변경
       document.getElementById('globeViz').style.cursor = obj ? 'pointer' : 'default';
     });
-
   </script>
 </body>
 </html>
