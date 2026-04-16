@@ -1,9 +1,65 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-    <title>내 첫 페이지</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Art Guide - World Museum Globe</title>
+  <style>
+    body { margin: 0; background-color: #000; overflow: hidden; font-family: sans-serif; }
+    #title-overlay {
+      position: absolute; top: 20px; left: 20px; color: white;
+      z-index: 10; pointer-events: none;
+    }
+  </style>
 </head>
 <body>
-    <h1>안녕하세요! Cloudflare Pages로 만든 사이트입니다.</h1>
+
+  <div id="title-overlay">
+    <h1>Art Guide Globe</h1>
+    <p>전 세계 미술관과 갤러리를 탐험하세요.</p>
+  </div>
+
+  <div id="globeViz"></div>
+
+  <script src="//unpkg.com/globe.gl"></script>
+
+  <script>
+    // 1. 미술관 데이터 (위도 lat, 경도 lng)
+    // 나중에 여기에 데이터를 계속 추가하시면 됩니다!
+    const museumData = [
+      { name: "루브르 박물관 (프랑스)", lat: 48.8606, lng: 2.3376, color: 'red', size: 0.5 },
+      { name: "메트로폴리탄 미술관 (미국)", lat: 40.7794, lng: -73.9632, color: 'red', size: 0.5 },
+      { name: "대영 박물관 (영국)", lat: 51.5194, lng: -0.1270, color: 'red', size: 0.5 },
+      { name: "국립현대미술관 (한국)", lat: 37.5791, lng: 126.9805, color: 'blue', size: 0.5 },
+      { name: "구겐하임 빌바오 (스페인)", lat: 43.2685, lng: -2.9340, color: 'red', size: 0.5 },
+      { name: "도쿄 국립 박물관 (일본)", lat: 35.7189, lng: 139.7764, color: 'red', size: 0.5 },
+      { name: "바티칸 미술관 (바티칸)", lat: 41.9065, lng: 12.4536, color: 'red', size: 0.5 }
+    ];
+
+    // 2. 지구본 설정
+    const world = Globe()
+      (document.getElementById('globeViz'))
+      // 지구본 이미지 설정 (고화질)
+      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+      .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
+      .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+      
+      // 데이터 포인트 설정
+      .pointsData(museumData)
+      .pointLat('lat')
+      .pointLng('lng')
+      .pointColor('color')
+      .pointRadius('size')
+      .pointLabel('name') // 마우스 올리면 이름 표시
+      
+      // 부드러운 애니메이션
+      .pointAltitude(0.1)
+      .pointsMerge(true);
+
+    // 3. 자동 회전 설정
+    world.controls().autoRotate = true;
+    world.controls().autoRotateSpeed = 0.5;
+
+  </script>
 </body>
 </html>
