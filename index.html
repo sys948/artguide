@@ -71,4 +71,18 @@
       
       // 3. 클릭 시 해당 URL로 새 탭에서 열기
       .onPointClick(d => {
-        window.
+        window.open(d.url, '_blank');
+      });
+
+    // 자동 회전 및 마우스 조작 설정
+    world.controls().autoRotate = true;
+    world.controls().autoRotateSpeed = 0.5;
+    
+    // 점에 마우스를 올리면 커서 모양을 손가락 모양으로 변경
+    world.onPointHover(obj => {
+      document.getElementById('globeViz').style.cursor = obj ? 'pointer' : 'default';
+    });
+
+  </script>
+</body>
+</html>
