@@ -10,7 +10,6 @@
       position: absolute; top: 20px; left: 20px; color: white;
       z-index: 10; pointer-events: none; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
-    /* 팝업 창 스타일 */
     .scene-tooltip {
       background: rgba(20, 20, 20, 0.95) !important;
       border: 1px solid #444 !important;
@@ -52,32 +51,19 @@
       { name: "퐁피두 센터 (Centre Pompidou)", country: "프랑스", lat: 48.8606, lng: 2.3522, url: "https://www.centrepompidou.fr/en/what-on/exhibitions", img: "https://www.centrepompidou.fr/media/image/exhibition_hero.jpg", exhibition: "Constantin Brancusi: The Sculpture of Architecture" }
     ];
 
-    // 깃발 아이콘 (SVG 형식)
-    const flagSvg = `<svg viewBox="-4 0 36 36" fill="#ff3b3b"><path d="M14 0l16 9-16 9V0zM12 0v36h2V0h-2z"/></svg>`;
-
     const world = Globe()
       (document.getElementById('globeViz'))
       .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
       .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
       .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
       
-      // 1. 깃발을 그리는 부분 (HtmlMarker 방식 대신 안정적인 Objects 방식)
-      .objectsData(museumData)
-      .objectLat('lat')
-      .objectLng('lng')
-      .objectThreeObject(d => {
-        const img = document.createElement('img');
-        // 투명한 깃발 아이콘 이미지를 사용합니다.
-        img.src = 'data:image/svg+xml;base64,' + btoa(flagSvg);
-        img.style.width = '30px';
-        
-        // CSS2DObject를 사용하여 지구본 위에 깃발을 띄웁니다.
-        const obj = new THREE.Sprite(new THREE.SpriteMaterial({ 
-          map: new THREE.TextureLoader().load('data:image/svg+xml;base64,' + btoa(flagSvg))
-        }));
-        obj.scale.set(12, 12, 1); // 깃발 크기
-        return obj;
-      })
+      // 1. 가장 안정적인 Points 방식 사용
+      .pointsData(museumData)
+      .pointLat('lat')
+      .pointLng('lng')
+      .pointColor(() => '#ff3b3b') // 깃발 느낌의 빨간색
+      .pointRadius(0.8)
+      .pointAltitude(0.01)
 
       // 2. 정보 창 (전시 정보 & 한글 좌표)
       .pointLabel(d => `
