@@ -64,9 +64,11 @@
     .tooltip-content b { font-size: 18px; color: #00f2ff; display: block; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 8px; }
     .exhibit-info { font-size: 13px; color: #ccc; line-height: 1.6; }
     
-    /* 에러 발생 시 보여줄 박스 스타일 */
     #error-box { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,0,0,0.8); color: white; padding: 30px; border-radius: 10px; z-index: 999; text-align: center; font-size: 16px; line-height: 1.5; }
   </style>
+
+  <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/globe.gl@2.31.1/dist/globe.gl.min.js"></script>
 </head>
 <body>
   
@@ -95,11 +97,10 @@
   <div id="error-box"></div>
   <div id="globeViz"></div>
 
-  <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/globe.gl@2.31.1/dist/globe.gl.min.js"></script>
-
   <script>
-    // 3D 렌더링에 실패하더라도 시계 패널은 작동하도록 먼저 실행합니다.
+    // ==========================================
+    // 1. 시계 로직 (라이브러리 로딩과 무관하게 즉시 실행)
+    // ==========================================
     let currentTimeZone = 'Asia/Seoul';
     const tabs = document.querySelectorAll('.tab');
     const dateDisplay = document.getElementById('time-date');
@@ -115,156 +116,149 @@
     });
 
     function updateClock() {
-      const now = new Date();
-      const dateFormatter = new Intl.DateTimeFormat('ko-KR', { timeZone: currentTimeZone, year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-      const timeFormatter = new Intl.DateTimeFormat('en-US', { timeZone: currentTimeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-      dateDisplay.textContent = dateFormatter.format(now);
-      clockDisplay.textContent = timeFormatter.format(now);
+      try {
+        const now = new Date();
+        const dateFormatter = new Intl.DateTimeFormat('ko-KR', { timeZone: currentTimeZone, year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+        const timeFormatter = new Intl.DateTimeFormat('en-US', { timeZone: currentTimeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        dateDisplay.textContent = dateFormatter.format(now);
+        clockDisplay.textContent = timeFormatter.format(now);
+      } catch(err) {
+        dateDisplay.textContent = "시간 로드 오류";
+      }
     }
     setInterval(updateClock, 1000);
     updateClock(); 
 
     // ==========================================
-    // 안전한 3D 지구본 렌더링 로직 시작
+    // 2. 3D 지구본 로직 (모든 데이터가 완벽히 로드된 후 실행)
     // ==========================================
-    try {
-      const artSpaces = [
-        { name: "국립현대미술관 (MMCA)", city: "Seoul", lat: 37.582, lng: 126.982, alt: 0.01, desc: "한국 현대미술의 중심지" },
-        { name: "모리 미술관", city: "Tokyo", lat: 35.660, lng: 139.729, alt: 0.01, desc: "롯폰기 힐즈의 현대미술관" },
-        { name: "LACMA", city: "LA", lat: 34.063, lng: -118.359, alt: 0.01, desc: "미국 서부 최대 규모의 미술관" },
-        { name: "MoMA", city: "New York", lat: 40.761, lng: -73.977, alt: 0.01, desc: "세계 최고의 현대미술 컬렉션" },
-        { name: "테이트 모던", city: "London", lat: 51.507, lng: -0.099, alt: 0.01, desc: "발전소를 개조한 현대미술관" },
-        { name: "루브르 박물관", city: "Paris", lat: 48.860, lng: 2.337, alt: 0.01, desc: "세계 3대 박물관 중 하나" }
-      ];
+    window.addEventListener('load', () => {
+      try {
+        const artSpaces = [
+          { name: "국립현대미술관 (MMCA)", city: "Seoul", lat: 37.582, lng: 126.982, alt: 0.01, desc: "한국 현대미술의 중심지" },
+          { name: "모리 미술관", city: "Tokyo", lat: 35.660, lng: 139.729, alt: 0.01, desc: "롯폰기 힐즈의 현대미술관" },
+          { name: "LACMA", city: "LA", lat: 34.063, lng: -118.359, alt: 0.01, desc: "미국 서부 최대 규모의 미술관" },
+          { name: "MoMA", city: "New York", lat: 40.761, lng: -73.977, alt: 0.01, desc: "세계 최고의 현대미술 컬렉션" },
+          { name: "테이트 모던", city: "London", lat: 51.507, lng: -0.099, alt: 0.01, desc: "발전소를 개조한 현대미술관" },
+          { name: "루브르 박물관", city: "Paris", lat: 48.860, lng: 2.337, alt: 0.01, desc: "세계 3대 박물관 중 하나" }
+        ];
 
-      for (let i = 1; i <= 994; i++) {
-        artSpaces.push({
-          name: `글로벌 아트 스페이스 #${i}`,
-          city: "Global Hub",
-          lat: (Math.random() - 0.5) * 160, 
-          lng: (Math.random() - 0.5) * 360,
-          alt: 0.01,
-          desc: "세계 곳곳에 숨겨진 예술 거점"
-        });
-      }
-
-      // 에러를 유발하지 않는 순수 입체 기하학 점(Sphere) 생성
-      const starGeo = new THREE.SphereGeometry(0.3, 8, 8); 
-      const starMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff });
-
-      const world = Globe()(document.getElementById('globeViz'))
-        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-        .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
-        .showAtmosphere(true)
-        .atmosphereColor('#00f2ff')
-        .atmosphereAltitude(0.15)
-        
-        // 데이터 매핑 설정
-        .customLayerData(artSpaces)
-        .customLayerLat('lat')
-        .customLayerLng('lng')
-        .customLayerAltitude('alt')
-        
-        // 별 생성 로직 (좌표 직접 계산 제거!)
-        .customThreeObject(d => {
-          const mesh = new THREE.Mesh(starGeo, starMat);
-          // 라이브러리가 위치를 자동으로 잡아주므로 직접 포지션을 세팅하지 않습니다.
-          mesh.userData = {
-            phase: Math.random() * 100,
-            speed: 0.05 + Math.random() * 0.05,
-            baseScale: 0.6 + Math.random() * 1.5
-          };
-          return mesh;
-        })
-        .customThreeObjectUpdate(obj => {
-          if (!obj || !obj.userData) return;
-          obj.userData.phase += obj.userData.speed;
-          // 크기가 작아졌다 커지면서 반짝이게 연출
-          const scale = obj.userData.baseScale * (0.3 + 0.7 * Math.abs(Math.sin(obj.userData.phase)));
-          obj.scale.set(scale, scale, scale);
-        })
-        .customLayerLabel(d => `
-          <div class="tooltip-content">
-            <b>${d.name}</b>
-            <div class="exhibit-info">도시: ${d.city}<br/>특징: ${d.desc}</div>
-          </div>
-        `)
-        .onCustomLayerHover(point => {
-          world.controls().autoRotate = !point;
-          document.body.style.cursor = point ? 'pointer' : 'default';
-        });
-
-      world.controls().autoRotate = true;
-      world.controls().autoRotateSpeed = 1.0;
-      world.pointOfView({ lat: 37.5, lng: 126.9, altitude: 2.5 });
-
-      // 낮과 밤 조명 및 야간 텍스처 적용
-      world.onGlobeReady(() => {
-        const scene = world.scene();
-        const camera = world.camera();
-
-        // 야간 불빛(Night map) 설정
-        new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-night.jpg', tex => {
-          const mat = world.globeMaterial();
-          mat.emissiveMap = tex;
-          mat.emissive = new THREE.Color(0xffeeba);
-          mat.emissiveIntensity = 2.0;
-          mat.needsUpdate = true;
-        });
-
-        // 불필요한 기본 조명 안전하게 끄기
-        if (camera && camera.children) {
-          const cLight = camera.children.find(c => c.isLight && c.type === 'DirectionalLight');
-          if (cLight) cLight.intensity = 0;
-        }
-        if (scene && scene.children) {
-          const aLight = scene.children.find(c => c.isLight && c.type === 'AmbientLight');
-          if (aLight) aLight.intensity = 0.05;
+        for (let i = 1; i <= 994; i++) {
+          artSpaces.push({
+            name: `글로벌 아트 스페이스 #${i}`,
+            city: "Global Hub",
+            lat: (Math.random() - 0.5) * 160, 
+            lng: (Math.random() - 0.5) * 360,
+            alt: 0.01,
+            desc: "세계 곳곳에 숨겨진 예술 거점"
+          });
         }
 
-        // 태양광 설정
-        const sunLight = new THREE.DirectionalLight(0xffffff, 3.5); 
-        scene.add(sunLight);
+        const starGeo = new THREE.SphereGeometry(0.3, 8, 8); 
+        const starMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff });
 
-        function updateSun() {
-          const now = new Date();
-          const start = new Date(now.getFullYear(), 0, 0);
-          const dayOfYear = Math.floor((now - start) / 86400000);
+        const world = Globe()(document.getElementById('globeViz'))
+          .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+          .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+          .showAtmosphere(true)
+          .atmosphereColor('#00f2ff')
+          .atmosphereAltitude(0.15)
+          .customLayerData(artSpaces)
+          .customLayerLat('lat')
+          .customLayerLng('lng')
+          .customLayerAltitude('alt')
+          .customThreeObject(d => {
+            const mesh = new THREE.Mesh(starGeo, starMat);
+            mesh.userData = {
+              phase: Math.random() * 100,
+              speed: 0.05 + Math.random() * 0.05,
+              baseScale: 0.6 + Math.random() * 1.5
+            };
+            return mesh;
+          })
+          .customThreeObjectUpdate(obj => {
+            if (!obj || !obj.userData) return;
+            obj.userData.phase += obj.userData.speed;
+            const scale = obj.userData.baseScale * (0.3 + 0.7 * Math.abs(Math.sin(obj.userData.phase)));
+            obj.scale.set(scale, scale, scale);
+          })
+          .customLayerLabel(d => `
+            <div class="tooltip-content">
+              <b>${d.name}</b>
+              <div class="exhibit-info">도시: ${d.city}<br/>특징: ${d.desc}</div>
+            </div>
+          `)
+          .onCustomLayerHover(point => {
+            world.controls().autoRotate = !point;
+            document.body.style.cursor = point ? 'pointer' : 'default';
+          });
+
+        world.controls().autoRotate = true;
+        world.controls().autoRotateSpeed = 1.0;
+        world.pointOfView({ lat: 37.5, lng: 126.9, altitude: 2.5 });
+
+        world.onGlobeReady(() => {
+          const scene = world.scene();
+          const camera = world.camera();
+
+          new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-night.jpg', tex => {
+            const mat = world.globeMaterial();
+            mat.emissiveMap = tex;
+            mat.emissive = new THREE.Color(0xffeeba);
+            mat.emissiveIntensity = 2.0;
+            mat.needsUpdate = true;
+          });
+
+          if (camera && camera.children) {
+            const cLight = camera.children.find(c => c.isLight && c.type === 'DirectionalLight');
+            if (cLight) cLight.intensity = 0;
+          }
+          if (scene && scene.children) {
+            const aLight = scene.children.find(c => c.isLight && c.type === 'AmbientLight');
+            if (aLight) aLight.intensity = 0.05;
+          }
+
+          const sunLight = new THREE.DirectionalLight(0xffffff, 3.5); 
+          scene.add(sunLight);
+
+          function updateSun() {
+            const now = new Date();
+            const start = new Date(now.getFullYear(), 0, 0);
+            const dayOfYear = Math.floor((now - start) / 86400000);
+            
+            const declination = -23.44 * Math.cos((360 / 365) * (dayOfYear + 10) * (Math.PI / 180));
+            const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+            const sunLng = 180 - (utcHours * 15);
+
+            const radius = 300; 
+            const phi = (90 - declination) * (Math.PI / 180);
+            const theta = (90 - sunLng) * (Math.PI / 180);
+
+            sunLight.position.set(
+              radius * Math.sin(phi) * Math.cos(theta),
+              radius * Math.cos(phi),
+              radius * Math.sin(phi) * Math.sin(theta)
+            );
+          }
           
-          const declination = -23.44 * Math.cos((360 / 365) * (dayOfYear + 10) * (Math.PI / 180));
-          const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
-          const sunLng = 180 - (utcHours * 15);
+          updateSun();
+          setInterval(updateSun, 60000);
+        });
 
-          const radius = 300; 
-          const phi = (90 - declination) * (Math.PI / 180);
-          const theta = (90 - sunLng) * (Math.PI / 180);
+        window.addEventListener('resize', () => {
+          const container = document.getElementById('globeViz');
+          if (world && container) {
+            world.width(container.clientWidth).height(container.clientHeight);
+          }
+        });
 
-          sunLight.position.set(
-            radius * Math.sin(phi) * Math.cos(theta),
-            radius * Math.cos(phi),
-            radius * Math.sin(phi) * Math.sin(theta)
-          );
-        }
-        
-        updateSun();
-        setInterval(updateSun, 60000);
-      });
-
-      // 브라우저 리사이즈 대응
-      window.addEventListener('resize', () => {
-        const container = document.getElementById('globeViz');
-        if (world && container) {
-          world.width(container.clientWidth).height(container.clientHeight);
-        }
-      });
-
-    } catch (e) {
-      // 에러 발생 시 콘솔이 아닌 화면에 대문짝만하게 출력되도록 하여 원인을 명확히 파악할 수 있게 합니다.
-      const errorBox = document.getElementById('error-box');
-      errorBox.style.display = 'block';
-      errorBox.innerHTML = `<strong>지구본 렌더링 오류 발생</strong><br><br>${e.message}<br><br><small>이 화면을 캡처해서 알려주시면 즉시 해결해 드리겠습니다.</small>`;
-      console.error(e);
-    }
+      } catch (e) {
+        const errorBox = document.getElementById('error-box');
+        errorBox.style.display = 'block';
+        errorBox.innerHTML = `<strong>지구본 렌더링 오류 발생</strong><br><br>${e.message}<br><br><small>문제가 지속되면 새로고침을 해주세요.</small>`;
+        console.error(e);
+      }
+    });
   </script>
 </body>
 </html>
