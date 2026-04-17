@@ -176,49 +176,10 @@
     world.controls().autoRotateSpeed = 1.2;
     world.pointOfView({ lat: 37.5, lng: 126.9, altitude: 2.5 });
 
-   // 3. [수정된 요구사항 2] 실시간 낮과 밤 조명 표현 (Three.js 활용)
-    // 옵션 A: 매 프레임마다 조명을 강제 덮어쓰기
-    const scene = world.scene();
-    const camera = world.camera();
-
-    // 1. 우리가 사용할 강력한 태양광과 아주 어두운 환경광 생성
-    const sunLight = new THREE.DirectionalLight(0xffffff, 4.0); // 강도 상향
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.05); // 밤 영역의 어두운 정도
-    scene.add(sunLight);
-    scene.add(ambientLight);
-
-    // 2. 애니메이션 루프로 무한 갱신
-    function enforceLighting() {
-      // globe.gl이 자꾸 켜는 기본 조명들을 찾아내서 밝기를 0으로 만듦
-      scene.children.forEach(c => {
-        if (c !== sunLight && c !== ambientLight && c.isLight) c.intensity = 0;
-      });
-      camera.children.forEach(c => {
-        if (c.isLight) c.intensity = 0;
-      });
-
-      // 태양의 위치 실시간 계산
-      const now = new Date();
-      const start = new Date(now.getFullYear(), 0, 0);
-      const diff = now - start;
-      const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
-      
-      const declination = -23.44 * Math.cos((360 / 365) * (dayOfYear + 10) * (Math.PI / 180));
-      const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
-      const sunLng = 180 - (utcHours * 15);
-
-      // 계산된 위치로 태양광 고정
-      const coords = world.getCoords(declination, sunLng, 100);
-      sunLight.position.set(coords.x, coords.y, coords.z);
-
-      // 다음 프레임에 또 실행
-      requestAnimationFrame(enforceLighting);
-    }
-    
-    // 루프 즉시 실행
-    enforceLighting();
-
-    // 4. [요구사항 3] 좌측 하단 국제 날짜/시간 탭 로직
+   // ==========================================
+    // 3. 좌측 하단 국제 날짜/시간 탭 로직 (먼저 실행)
+    // ==========================================
+    // 3D 렌더링 지연에 영향을 받지 않도록 시계 로직을 위로 올렸습니다.
     let currentTimeZone = 'Asia/Seoul';
     
     const tabs = document.querySelectorAll('.tab');
@@ -228,11 +189,9 @@
     // 탭 클릭 이벤트
     tabs.forEach(tab => {
       tab.addEventListener('click', (e) => {
-        // 활성화 UI 변경
         tabs.forEach(t => t.classList.remove('active'));
         e.target.classList.add('active');
         
-        // 타임존 업데이트
         currentTimeZone = e.target.getAttribute('data-tz');
         updateClock();
       });
@@ -242,13 +201,11 @@
     function updateClock() {
       const now = new Date();
       
-      // 날짜 포맷팅 (예: 2026년 4월 17일 금요일)
       const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
         timeZone: currentTimeZone,
         year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
       });
       
-      // 시간 포맷팅 (예: 15:05:51)
       const timeFormatter = new Intl.DateTimeFormat('en-US', {
         timeZone: currentTimeZone,
         hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
@@ -258,14 +215,54 @@
       clockDisplay.textContent = timeFormatter.format(now);
     }
 
-    // 1초마다 시계 업데이트
+    // 시계 루프 즉시 실행
     setInterval(updateClock, 1000);
-    updateClock(); // 초기 즉시 실행
+    updateClock(); 
 
-    // 반응형 리사이즈 처리
-    window.addEventListener('resize', () => {
-      world.width(window.innerWidth).height(window.innerHeight);
-    });
-  </script>
-</body>
-</html>
+    // ==========================================
+    // 4. 실시간 낮과 밤 조명 표현 (이후 실행)
+    // ==========================================
+    // Globe.gl 씬이 완전히 로드될 시간을 주기 위해 0.5초 지연(setTimeout)을 줍니다.
+    setTimeout(() => {
+      const scene = world.scene();
+      const camera = world.camera();
+
+      // 우리가 사용할 강력한 태양광과 아주 어두운 환경광 생성
+      const sunLight = new THREE.DirectionalLight(0xffffff, 4.0); 
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.05); 
+      scene.add(sunLight);
+      scene.add(ambientLight);
+
+      // 애니메이션 루프로 무한 갱신
+      function enforceLighting() {
+        if (!scene || !camera) return; // 에러 방지용 안전장치
+
+        // globe.gl이 자꾸 켜는 기본 조명들을 찾아내서 밝기를 0으로 만듦
+        scene.children.forEach(c => {
+          if (c !== sunLight && c !== ambientLight && c.isLight) c.intensity = 0;
+        });
+        camera.children.forEach(c => {
+          if (c.isLight) c.intensity = 0;
+        });
+
+        // 태양의 위치 실시간 계산
+        const now = new Date();
+        const start = new Date(now.getFullYear(), 0, 0);
+        const diff = now - start;
+        const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+        
+        const declination = -23.44 * Math.cos((360 / 365) * (dayOfYear + 10) * (Math.PI / 180));
+        const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+        const sunLng = 180 - (utcHours * 15);
+
+        // 계산된 위치로 태양광 고정
+        const coords = world.getCoords(declination, sunLng, 100);
+        sunLight.position.set(coords.x, coords.y, coords.z);
+
+        // 다음 프레임에 또 실행
+        requestAnimationFrame(enforceLighting);
+      }
+      
+      // 루프 즉시 실행
+      enforceLighting();
+    }, 500);
