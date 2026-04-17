@@ -14,7 +14,6 @@
       font-family: 'Pretendard', sans-serif; 
     }
     
-    /* 상단 타이틀 */
     #title-overlay {
       position: absolute; 
       top: 30px; 
@@ -27,7 +26,6 @@
     #title-overlay h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: 1px; }
     #title-overlay p { margin: 8px 0 0; font-size: 14px; color: #aaa; }
 
-    /* 좌측 하단 국제 시간 탭 패널 */
     #time-panel {
       position: absolute;
       bottom: 30px;
@@ -42,63 +40,22 @@
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
     }
     
-    .tabs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 15px;
-      flex-wrap: wrap;
-    }
-    
-    .tab {
-      padding: 6px 12px;
-      background: rgba(255, 255, 255, 0.1);
-      color: #aaa;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      border: 1px solid transparent;
-    }
-    
+    .tabs { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 6px 12px; background: rgba(255, 255, 255, 0.1); color: #aaa; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; border: 1px solid transparent; }
     .tab:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
-    
-    .tab.active {
-      background: rgba(0, 242, 255, 0.15);
-      color: #00f2ff;
-      border-color: #00f2ff;
-      box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
-    }
+    .tab.active { background: rgba(0, 242, 255, 0.15); color: #00f2ff; border-color: #00f2ff; box-shadow: 0 0 10px rgba(0, 242, 255, 0.3); }
 
-    #time-display {
-      color: #fff;
-    }
+    #time-display { color: #fff; }
     #time-date { font-size: 13px; color: #888; margin-bottom: 5px; }
     #time-clock { font-size: 26px; font-weight: 700; color: #fff; letter-spacing: 1px; }
 
-    /* 툴팁 스타일 */
-    .scene-tooltip {
-      background: rgba(0, 5, 10, 0.95) !important;
-      border: 1px solid #00f2ff !important;
-      border-radius: 8px !important;
-      padding: 15px !important;
-      box-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
-      font-family: 'Pretendard', sans-serif;
-    }
+    .scene-tooltip { background: rgba(0, 5, 10, 0.95) !important; border: 1px solid #00f2ff !important; border-radius: 8px !important; padding: 15px !important; box-shadow: 0 0 20px rgba(0, 242, 255, 0.4); font-family: 'Pretendard', sans-serif; }
     .tooltip-content { width: 220px; color: #fff; pointer-events: none; }
-    .tooltip-content b { 
-      font-size: 18px; 
-      color: #00f2ff; 
-      display: block; 
-      margin-bottom: 8px; 
-      border-bottom: 1px solid rgba(255,255,255,0.2); 
-      padding-bottom: 8px; 
-    }
+    .tooltip-content b { font-size: 18px; color: #00f2ff; display: block; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 8px; }
     .exhibit-info { font-size: 13px; color: #ccc; line-height: 1.6; }
   </style>
 </head>
 <body>
-
   <div id="title-overlay">
     <h1>Art Guide Globe</h1>
     <p>실시간 100대 미술관 가이드 (2026. 04. 17.)</p>
@@ -127,132 +84,95 @@
   <script src="https://unpkg.com/globe.gl"></script>
 
   <script>
-    // 1. 임의의 주요 미술관 데이터 (실제 서비스 시 100개 데이터로 확장)
     const artSpaces = [
       { name: "국립현대미술관 (MMCA)", city: "Seoul", lat: 37.582, lng: 126.982, alt: 0.15, desc: "한국 현대미술의 중심지" },
       { name: "모리 미술관", city: "Tokyo", lat: 35.660, lng: 139.729, alt: 0.15, desc: "롯폰기 힐즈의 현대미술관" },
-      { name: "LACMA", city: "LA", lat: 34.063, lng: -118.359, alt: 0.15, desc: "미국 서부 최대 규모의 미술관" },
+      { name: "LACMA", 시티: "LA", lat: 34.063, lng: -118.359, alt: 0.15, desc: "미국 서부 최대 규모의 미술관" },
       { name: "MoMA", city: "New York", lat: 40.761, lng: -73.977, alt: 0.15, desc: "세계 최고의 현대미술 컬렉션" },
       { name: "테이트 모던", city: "London", lat: 51.507, lng: -0.099, alt: 0.15, desc: "발전소를 개조한 현대미술관" },
       { name: "루브르 박물관", city: "Paris", lat: 48.860, lng: 2.337, alt: 0.15, desc: "세계 3대 박물관 중 하나" }
     ];
 
-    // 2. 지구본 초기화 및 야간 불빛 텍스처 적용
-    const textureLoader = new THREE.TextureLoader();
-    const dayMap = textureLoader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');
-    const nightMap = textureLoader.load('https://unpkg.com/three-globe/example/img/earth-night.jpg'); // 도시 불빛 이미지
-
-    // 커스텀 재질(Material) 생성
-    const globeMaterial = new THREE.MeshStandardMaterial({
-      map: dayMap,
-      emissiveMap: nightMap,
-      emissive: new THREE.Color(0xfff0aa), // 따뜻한 도시 불빛 색상 (연한 노란색)
-      emissiveIntensity: 1.5, // 불빛의 밝기 조절 (숫자가 클수록 밝아짐)
-      roughness: 0.8, // 표면의 거친 정도 (빛 반사 조절)
-      metalness: 0.1
-    });
-
+    // 1. 지구본 초기화 (기본 이미지 맵 로드 유지하여 충돌 방지)
     const world = Globe()
       (document.getElementById('globeViz'))
-      .globeMaterial(globeMaterial) // 커스텀 재질 적용
+      .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
       .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
       .showAtmosphere(true)
       .atmosphereColor('#00f2ff')
       .atmosphereAltitude(0.15)
-      
-      // 기둥(사이언 색) 세팅
       .pointsData(artSpaces)
       .pointAltitude('alt')
       .pointColor(() => '#00f2ff')
       .pointRadius(0.8)
       .pointResolution(32)
-      
-      // 툴팁(라벨) 세팅
       .pointLabel(d => `
         <div class="tooltip-content">
           <b>${d.name}</b>
-          <div class="exhibit-info">
-            도시: ${d.city}<br/>
-            특징: ${d.desc}
-          </div>
+          <div class="exhibit-info">도시: ${d.city || d.시티}<br/>특징: ${d.desc}</div>
         </div>
       `)
-      
-      // [요구사항 1] 마우스 호버 시 회전 멈춤
       .onPointHover(point => {
         world.controls().autoRotate = !point;
         document.body.style.cursor = point ? 'pointer' : 'default';
       });
 
-    // 카메라 및 컨트롤 초기 세팅
     world.controls().autoRotate = true;
     world.controls().autoRotateSpeed = 1.2;
     world.pointOfView({ lat: 37.5, lng: 126.9, altitude: 2.5 });
 
-    // ==========================================
-    // 3. 좌측 하단 국제 날짜/시간 탭 로직 (먼저 실행)
-    // ==========================================
-    let currentTimeZone = 'Asia/Seoul';
+    // 2. 야간 도시 불빛(City Lights) 추가 (안전한 병합 방식)
+    const textureLoader = new THREE.TextureLoader();
+    const nightMap = textureLoader.load('https://unpkg.com/three-globe/example/img/earth-night.jpg');
     
+    // 엔진이 만든 재질 객체를 그대로 가져와 발광 속성(Emissive)만 안전하게 주입합니다.
+    const globeMat = world.globeMaterial(); 
+    globeMat.emissiveMap = nightMap;
+    globeMat.emissive = new THREE.Color(0xffeeba); // 따뜻한 불빛 색상
+    globeMat.emissiveIntensity = 2.0; // 불빛 강도
+
+    // 3. 좌측 하단 국제 날짜/시간 탭 로직
+    let currentTimeZone = 'Asia/Seoul';
     const tabs = document.querySelectorAll('.tab');
     const dateDisplay = document.getElementById('time-date');
     const clockDisplay = document.getElementById('time-clock');
 
-    // 탭 클릭 이벤트
     tabs.forEach(tab => {
       tab.addEventListener('click', (e) => {
         tabs.forEach(t => t.classList.remove('active'));
         e.target.classList.add('active');
-        
         currentTimeZone = e.target.getAttribute('data-tz');
         updateClock();
       });
     });
 
-    // 시계 업데이트 함수
     function updateClock() {
       const now = new Date();
-      
-      const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
-        timeZone: currentTimeZone,
-        year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
-      });
-      
-      const timeFormatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: currentTimeZone,
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-      });
-
+      const dateFormatter = new Intl.DateTimeFormat('ko-KR', { timeZone: currentTimeZone, year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+      const timeFormatter = new Intl.DateTimeFormat('en-US', { timeZone: currentTimeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
       dateDisplay.textContent = dateFormatter.format(now);
       clockDisplay.textContent = timeFormatter.format(now);
     }
 
-    // 시계 루프 즉시 실행
     setInterval(updateClock, 1000);
     updateClock(); 
 
-    // ==========================================
-    // 4. 실시간 낮과 밤 조명 표현 (충돌 없는 안전한 방식)
-    // ==========================================
+    // 4. 실시간 낮과 밤 조명 표현
     setTimeout(() => {
       const scene = world.scene();
       const camera = world.camera();
 
-      // 1. 그래픽 충돌 방지: Globe.gl의 기본 카메라 조명 제거
-      camera.children = camera.children.filter(c => c.type !== 'DirectionalLight');
+      // [핵심 수정]: Three.js 엔진 구조가 깨지지 않도록 정규 remove() 함수 사용
+      const lightsToRemove = camera.children.filter(c => c.type === 'DirectionalLight');
+      lightsToRemove.forEach(l => camera.remove(l));
       
-      // 2. 밤 영역 설정: 기본 환경광을 달빛처럼 아주 어둡게 조절
       scene.children.forEach(c => {
-        if (c.type === 'AmbientLight') {
-          c.intensity = 0.05; 
-        }
+        if (c.type === 'AmbientLight') c.intensity = 0.02; // 밤을 아주 어둡게 조절하여 불빛을 돋보이게 함
       });
 
-      // 3. 낮 영역 설정: 새로운 강력한 태양광 생성 후 추가
-      const sunLight = new THREE.DirectionalLight(0xffffff, 4.0); 
+      const sunLight = new THREE.DirectionalLight(0xffffff, 5.0); 
       scene.add(sunLight);
 
-      // 4. 태양 위치 계산 함수 (안전한 수학 공식)
       function updateSunPosition() {
         const now = new Date();
         const start = new Date(now.getFullYear(), 0, 0);
@@ -277,7 +197,6 @@
 
     }, 1000);
 
-    // 반응형 리사이즈 처리
     window.addEventListener('resize', () => {
       world.width(window.innerWidth).height(window.innerHeight);
     });
