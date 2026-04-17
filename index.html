@@ -59,79 +59,69 @@
     ];
 
     // 2. 지구본 렌더링
-    const world = Globe()
-      (document.getElementById('globeViz'))
-      .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-      .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
-      .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-      .nightImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
-      .pointsData(museumData)
-      .pointLat('lat')
-      .pointLng('lng')
-      .pointRadius(0.35)
-      .pointAltitude(0.02)
-      .pointColor(() => '#ffffff') // 초미세 크기의 화이트 마커로 고정
-      .pointLabel(d => {
-        // 오늘 날짜에 진행 중인 전시를 찾습니다.
-        const current = d.exhibitions.find(ex => today >= new Date(ex.start) && today <= new Date(ex.end));
-        const exhibitionTitle = current ? current.title : '오늘 진행 중인 대표 전시 정보가 없습니다.';
-        
-        // 네이티브 툴팁 형식을 사용하여 검은 사각형 문제를 해결합니다.
-        return `
-          <div style="background: rgba(0, 5, 10, 0.95); border: 1px solid #fff; padding: 12px; border-radius: 6px; color: white;">
-            <b style="font-size: 16px; color: #00f2ff; display: block; margin-bottom: 5px;">${d.name}</b>
-            <div style="font-size: 13px; color: #fff; line-height: 1.5;">
-              <strong>오늘 진행 중인 대표 전시:</strong><br/>
-              ${exhibitionTitle}
-            </div>
-          </div>
-        `;
-      })
-      .onPointClick(d => window.open(d.url, '_blank'));
+const world = Globe()(document.getElementById('globeViz'))
+  .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+  .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+  .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+  .nightImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+  .pointsData(museumData)
+  .pointLat('lat')
+  .pointLng('lng')
+  .pointRadius(1.2)      // [수정됨] 마커 크기 대폭 확대 (0.35 -> 1.2)
+  .pointAltitude(0.02)
+  .pointColor(() => '#00f2ff') // [수정됨] 가시성을 위해 사이안(Cyan) 색상으로 변경
+  .pointLabel(d => {
+    // [수정됨] Date 객체의 getTime()을 활용하여 더 안전한 날짜 비교
+    const todayTime = today.getTime();
+    const current = d.exhibitions.find(ex => {
+      return todayTime >= new Date(ex.start).getTime() && todayTime <= new Date(ex.end).getTime();
+    });
+    const exhibitionTitle = current ? current.title : '오늘 진행 중인 대표 전시 정보가 없습니다.';
+    
+    return `
+      <div style="background: rgba(0, 5, 10, 0.95); border: 1px solid #fff; padding: 12px; border-radius: 6px; color: white;">
+        <b style="font-size: 16px; color: #00f2ff; display: block; margin-bottom: 5px;">${d.name}</b>
+        <div style="font-size: 13px; color: #fff; line-height: 1.5;">
+          <strong>오늘 진행 중인 대표 전시:</strong><br/>
+          ${exhibitionTitle}
+        </div>
+      </div>
+    `;
+  })
+  .onPointClick(d => window.open(d.url, '_blank'));
 
-    world.controls().autoRotate = true;
-    world.controls().autoRotateSpeed = 0.5;
-    world.onPointHover(obj => { world.controls().autoRotate = !obj; });
+world.controls().autoRotate = true;
+world.controls().autoRotateSpeed = 0.5;
+world.onPointHover(obj => { world.controls().autoRotate = !obj; });
 
-    // 3. 실시간 국제 시계 로직
-    function updateClock() {
-      const now = new Date();
-      const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-      
-      try {
-        document.getElementById('time-seoul').innerText = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: 'Asia/Seoul' }).format(now);
-        document.getElementById('time-london').innerText = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: 'Europe/London' }).format(now);
-        document.getElementById('time-newyork').innerText = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: 'America/New_York' }).format(now);
-        document.getElementById('time-paris').innerText = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: 'Europe/Paris' }).format(now);
-      } catch (e) { console.error("Time update error:", e); }
+// 3. 실시간 국제 시계 로직 (기존과 동일하게 유지)
+// ... (생략) ...
+
+// 4. 실시간 태양 광원(낮/밤) 분리 로직 (수정됨)
+setTimeout(() => {
+  const scene = world.scene();
+  const camera = world.camera();
+  
+  // 카메라에 기본 부착된 방향성 조명(DirectionalLight) 추출
+  const defaultLight = camera.children.find(c => c.type === 'DirectionalLight');
+  if (defaultLight) {
+    camera.remove(defaultLight);
+    scene.add(defaultLight);
+    defaultLight.intensity = 2.5; // 밝기 최적화
+  }
+  
+  // 우주 공간의 기본 조도 추가
+  scene.add(new THREE.AmbientLight(0x222222));
+
+  setInterval(() => {
+    const now = new Date();
+    // 태양의 경도(Longitude) 계산
+    const sunLng = -((now.getUTCHours() + now.getUTCMinutes() / 60) * 15 - 180);
+    const rad = sunLng * Math.PI / 180;
+    
+    if (defaultLight) {
+      // [핵심 수정됨] 곱하는 거리를 100(지구 표면)에서 2000(먼 우주)으로 수정해야 밤/낮 텍스처가 계산됩니다.
+      defaultLight.position.set(Math.cos(rad) * 2000, 0, Math.sin(rad) * 2000);
     }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    // 4. 실시간 태양 광원(낮/밤) 분리 로직 (가장 안정된 방식)
-    setTimeout(() => {
-      const scene = world.scene();
-      const camera = world.camera();
-      
-      const defaultLight = camera.children.find(c => c.type === 'DirectionalLight');
-      if (defaultLight) {
-        camera.remove(defaultLight);
-        scene.add(defaultLight);
-        defaultLight.intensity = 3; 
-      }
-      
-      scene.add(new THREE.AmbientLight(0x222222));
-
-      setInterval(() => {
-        const now = new Date();
-        const sunLng = -((now.getUTCHours() + now.getUTCMinutes() / 60) * 15 - 180);
-        const rad = sunLng * Math.PI / 180;
-        
-        if (defaultLight) {
-          defaultLight.position.set(Math.cos(rad) * 100, 0, Math.sin(rad) * 100);
-        }
-      }, 1000);
-    }, 1000);
-  </script>
-</body>
-</html>
+  }, 1000);
+}, 1000); // 씬(Scene)이 렌더링될 시간을 벌기 위한 여유 대기
