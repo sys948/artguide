@@ -137,10 +137,24 @@
       { name: "루브르 박물관", city: "Paris", lat: 48.860, lng: 2.337, alt: 0.15, desc: "세계 3대 박물관 중 하나" }
     ];
 
-    // 2. 지구본 초기화
+    // 2. 지구본 초기화 및 야간 불빛 텍스처 적용
+    const textureLoader = new THREE.TextureLoader();
+    const dayMap = textureLoader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');
+    const nightMap = textureLoader.load('https://unpkg.com/three-globe/example/img/earth-night.jpg'); // 도시 불빛 이미지
+
+    // 커스텀 재질(Material) 생성
+    const globeMaterial = new THREE.MeshStandardMaterial({
+      map: dayMap,
+      emissiveMap: nightMap,
+      emissive: new THREE.Color(0xfff0aa), // 따뜻한 도시 불빛 색상 (연한 노란색)
+      emissiveIntensity: 1.5, // 불빛의 밝기 조절 (숫자가 클수록 밝아짐)
+      roughness: 0.8, // 표면의 거친 정도 (빛 반사 조절)
+      metalness: 0.1
+    });
+
     const world = Globe()
       (document.getElementById('globeViz'))
-      .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+      .globeMaterial(globeMaterial) // 커스텀 재질 적용
       .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
       .showAtmosphere(true)
       .atmosphereColor('#00f2ff')
