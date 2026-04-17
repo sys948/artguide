@@ -3,26 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Art Guide - Live Globe 2026</title>
+  <title>Art Guide - Live Globe</title>
   <style>
     body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Pretendard', sans-serif; color: white; }
-    #title-overlay { position: absolute; top: 20px; left: 20px; z-index: 10; pointer-events: none; }
+    #title-overlay { position: absolute; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
     #time-panel {
-      position: absolute; bottom: 30px; left: 20px; z-index: 20;
+      position: absolute; bottom: 30px; left: 20px; z-index: 100;
       background: rgba(0, 10, 20, 0.85); border: 1px solid rgba(0, 242, 255, 0.5);
-      padding: 15px; border-radius: 12px; backdrop-filter: blur(15px); width: 210px;
+      padding: 15px; border-radius: 12px; backdrop-filter: blur(15px); width: 200px;
     }
     .time-item { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
     .time-item label { font-size: 10px; color: #00f2ff; font-weight: bold; }
     .time-item span { font-size: 16px; font-family: 'Courier New', monospace; font-weight: bold; }
-    .scene-tooltip { background: rgba(0, 5, 10, 0.95) !important; border: 1px solid #fff !important; padding: 10px; color: white; }
+    .scene-tooltip { background: rgba(0, 5, 10, 0.95) !important; border: 1px solid #fff !important; padding: 10px; color: white; border-radius: 4px; }
   </style>
 </head>
 <body>
 
   <div id="title-overlay">
     <h1 style="margin:0; font-size: 22px; color: #00f2ff;">Art Guide Globe</h1>
-    <p style="margin:5px 0; font-size: 12px; opacity: 0.7;">Real-time Day/Night & Exhibition Guide</p>
+    <p style="margin:5px 0; font-size: 12px; opacity: 0.7;">실시간 낮/밤 경계 & 전시 정보</p>
   </div>
 
   <div id="time-panel">
@@ -37,7 +37,7 @@
   <script src="//unpkg.com/globe.gl"></script>
 
   <script>
-    // 1. 데이터 설정 (2026년 4월 17일 기준)
+    // 1. 데이터 정의
     const today = new Date();
     const museumData = [
       { name: "국립현대미술관 서울", lat: 37.5791, lng: 126.9805, url: "https://www.mmca.go.kr/exhibitions/progressList.do", exhibitions: [{ title: "Connecting Bodies: Asian Women Artists", start: "2025-09-03", end: "2026-05-10" }] },
@@ -47,67 +47,65 @@
       { name: "메트로폴리탄 미술관", lat: 40.7794, lng: -73.9632, url: "https://www.metmuseum.org/exhibitions", exhibitions: [{ title: "Sleeping Beauties: Reawakening Fashion", start: "2026-04-10", end: "2026-09-02" }] }
     ].map(d => ({ ...d, phase: Math.random() * Math.PI * 2, speed: 0.002 + Math.random() * 0.003 }));
 
-    // 2. 지구본 초기화
-    const world = Globe()
-      (document.getElementById('globeViz'))
-      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-      .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
-      .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
-      .nightImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
-      .pointsData(museumData)
-      .pointLat('lat')
-      .pointLng('lng')
-      .pointRadius(0.35)
-      .pointAltitude(0.02)
-      .pointColor(() => 'rgba(255, 255, 255, 1)')
-      .pointLabel(d => {
-        const cur = d.exhibitions.find(ex => today >= new Date(ex.start) && today <= new Date(ex.end));
-        return `<div class="scene-tooltip"><b>${d.name}</b><br><small>${cur ? cur.title : 'Check Website'}</small></div>`;
-      })
-      .onPointClick(d => window.open(d.url, '_blank'));
+    // 2. 라이브러리 로드 대기 후 초기화
+    window.onload = () => {
+      const world = Globe()
+        (document.getElementById('globeViz'))
+        .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+        .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
+        .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+        .nightImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+        .pointsData(museumData)
+        .pointLat('lat')
+        .pointLng('lng')
+        .pointRadius(0.4)
+        .pointAltitude(0.02)
+        .pointColor(() => 'white')
+        .pointLabel(d => {
+          const cur = d.exhibitions.find(ex => today >= new Date(ex.start) && today <= new Date(ex.end));
+          return `<div class="scene-tooltip"><b>${d.name}</b><br><small>${cur ? cur.title : 'Check Website'}</small></div>`;
+        })
+        .onPointClick(d => window.open(d.url, '_blank'));
 
-    // 3. 낮/밤 광원 설정 (핵심 개선)
-    const scene = world.scene();
-    const THREE = window.THREE; // globe.gl이 로드한 THREE 객체 사용
-    
-    // 기본 광원 제거 및 커스텀 광원 추가
-    scene.children.forEach(c => { if (c.type === 'DirectionalLight' || c.type === 'AmbientLight') scene.remove(c); });
-    
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.5); // 아주 어두운 기본광
-    scene.add(ambientLight);
+      // --- 광원 및 자전 설정 ---
+      const scene = world.scene();
+      const THREE = window.THREE || world.__threeObj; // 엔진 객체 확보
 
-    const sunLight = new THREE.DirectionalLight(0xffffff, 3); // 강한 태양광
-    scene.add(sunLight);
+      // 기존 광원 제거 및 태양광 설정
+      const sunLight = new THREE.DirectionalLight(0xffffff, 3.5);
+      scene.add(sunLight);
+      scene.add(new THREE.AmbientLight(0xbbbbbb, 0.3)); // 밤인 지역도 아주 살짝 보이게
 
-    // 4. 시간 및 태양 위치 업데이트 루프
-    function update() {
-      const now = new Date();
+      function updateCycle() {
+        const now = new Date();
+        
+        // 시간 탭 업데이트
+        const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+        ['Asia/Seoul', 'Europe/London', 'America/New_York', 'Europe/Paris'].forEach((tz, i) => {
+          const id = ['seoul', 'london', 'newyork', 'paris'][i];
+          const el = document.getElementById(`time-${id}`);
+          if(el) el.innerText = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: tz }).format(now);
+        });
+
+        // 태양 위치 업데이트 (현재 시간에 맞게 낮/밤 경계 회전)
+        const lon = (now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600) * 15 - 180;
+        const rad = (lon + 90) * Math.PI / 180;
+        sunLight.position.set(Math.cos(rad) * 10, 1, Math.sin(rad) * 10);
+
+        // 점 반짝임
+        world.pointColor(d => {
+          const alpha = Math.max(0.3, (Math.sin(Date.now() * d.speed + d.phase) + 1) / 2);
+          return `rgba(255, 255, 255, ${alpha})`;
+        });
+
+        requestAnimationFrame(updateCycle);
+      }
+
+      world.controls().autoRotate = true;
+      world.controls().autoRotateSpeed = 0.5;
       
-      // 시계 업데이트
-      const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-      ['Asia/Seoul', 'Europe/London', 'America/New_York', 'Europe/Paris'].forEach((tz, i) => {
-        const id = ['seoul', 'london', 'newyork', 'paris'][i];
-        document.getElementById(`time-${id}`).innerText = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: tz }).format(now);
-      });
-
-      // 태양 위치 업데이트 (현재 시간에 맞춰 낮/밤 경계 조정)
-      const lon = (now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600) * 15 - 180;
-      const rad = (lon + 90) * Math.PI / 180;
-      sunLight.position.set(Math.cos(rad) * 10, 1, Math.sin(rad) * 10);
-      
-      // 포인트 반짝임 애니메이션
-      world.pointColor(d => {
-        const alpha = Math.max(0.3, (Math.sin(Date.now() * d.speed + d.phase) + 1) / 2);
-        return `rgba(255, 255, 255, ${alpha})`;
-      });
-
-      requestAnimationFrame(update);
-    }
-
-    world.controls().autoRotate = true;
-    world.controls().autoRotateSpeed = 0.5;
-    
-    update(); // 애니메이션 루프 시작
+      updateCycle();
+    };
   </script>
 </body>
 </html>
