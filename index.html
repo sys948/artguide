@@ -6,60 +6,40 @@
   <title>Art Guide - Global 1000 Art Spaces</title>
   
   <style>
-    /* 1. CSS 레이아웃 강제 고정 (지구본이 안 나오는 주 원인 해결) */
+    /* 화면 크기 강제 고정 */
     html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background-color: #000;
-      overflow: hidden;
-      font-family: sans-serif;
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background-color: #000; overflow: hidden; font-family: sans-serif;
     }
     
+    /* 지구본이 그려질 구역 - 배경색을 넣어 공간을 확인합니다 */
     #globeViz {
-      width: 100vw;
-      height: 100vh;
-      display: block;
+      width: 100vw; height: 100vh; display: block; background: #000;
     }
 
+    /* UI 레이어 */
     #title-overlay {
-      position: absolute; 
-      top: 20px; 
-      left: 20px; 
-      color: white;
-      z-index: 10; 
-      pointer-events: none; 
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      position: absolute; top: 20px; left: 20px; color: white;
+      z-index: 10; pointer-events: none;
     }
 
     #time-panel {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      z-index: 10;
-      background: rgba(0, 0, 0, 0.7);
-      border: 1px solid #00f2ff;
-      border-radius: 10px;
-      padding: 15px;
-      width: 280px;
-      color: white;
+      position: absolute; bottom: 20px; left: 20px; z-index: 10;
+      background: rgba(0, 0, 0, 0.8); border: 1px solid #00f2ff;
+      border-radius: 10px; padding: 15px; width: 280px; color: white;
     }
     
     .tabs { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
     .tab { 
-      padding: 4px 8px; 
-      background: #333; 
-      border-radius: 5px; 
-      font-size: 11px; 
-      cursor: pointer; 
+      padding: 5px 10px; background: #222; border-radius: 5px; 
+      font-size: 11px; cursor: pointer; border: 1px solid #444;
     }
-    .tab.active { background: #00f2ff; color: #000; }
-    #time-clock { font-size: 24px; font-weight: bold; margin-top: 5px; }
+    .tab.active { background: #00f2ff; color: #000; border-color: #00f2ff; }
+    #time-clock { font-size: 24px; font-weight: bold; margin-top: 5px; color: #00f2ff; }
   </style>
 
-  <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/globe.gl@2.31.1/dist/globe.gl.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.31.1/dist/globe.gl.min.js"></script>
 </head>
 <body>
   
@@ -70,7 +50,7 @@
 
   <div id="time-panel">
     <div class="tabs">
-      <div class="tab active" data-tz="Asia/Seoul">Seoul</div>
+      <div class="tab active" data-tz="Asia/Seoul">SEOUL</div>
       <div class="tab" data-tz="Asia/Hong_Kong">HK</div>
       <div class="tab" data-tz="America/New_York">NY</div>
       <div class="tab" data-tz="Europe/London">LDN</div>
@@ -78,7 +58,7 @@
       <div class="tab" data-tz="Asia/Tokyo">TKO</div>
     </div>
     <div id="time-display">
-      <div id="time-date" style="font-size:12px; color:#aaa">로딩 중...</div>
+      <div id="time-date" style="font-size:12px; color:#aaa">Date Loading...</div>
       <div id="time-clock">00:00:00</div>
     </div>
   </div>
@@ -86,7 +66,7 @@
   <div id="globeViz"></div>
 
   <script>
-    // 3. 시계 기능
+    // 1. 시계 기능 (즉시 실행)
     let currentTimeZone = 'Asia/Seoul';
     function updateClock() {
       const now = new Date();
@@ -106,52 +86,58 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // 4. 지구본 실행 (데이터 생성 및 렌더링)
-    const artData = [...Array(1000).keys()].map(i => ({
-      name: `Art Space #${i}`,
-      lat: (Math.random() - 0.5) * 160,
-      lng: (Math.random() - 0.5) * 360
-    }));
+    // 2. 지구본 초기화 (라이브러리 로드 확인 후 실행)
+    function startGlobe() {
+      if (typeof Globe === 'undefined') {
+        console.error("Globe library not loaded yet.");
+        return;
+      }
 
-    const world = Globe()(document.getElementById('globeViz'))
-      .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-      .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
-      .showAtmosphere(true)
-      .atmosphereColor('#00f2ff')
-      .customLayerData(artData)
-      .customThreeObject(() => new THREE.Mesh(
-        new THREE.SphereGeometry(0.35),
-        new THREE.MeshBasicMaterial({ color: 0x00f2ff })
-      ))
-      .customThreeObjectUpdate((obj) => {
-        // 무작위 반짝임 효과
-        const s = 0.6 + Math.abs(Math.sin(Date.now() * 0.002 + Math.random()));
-        obj.scale.set(s, s, s);
+      const artData = [...Array(1000).keys()].map(i => ({
+        name: `Art Space #${i}`,
+        lat: (Math.random() - 0.5) * 160,
+        lng: (Math.random() - 0.5) * 360
+      }));
+
+      const world = Globe()(document.getElementById('globeViz'))
+        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+        .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+        .showAtmosphere(true)
+        .atmosphereColor('#00f2ff')
+        .atmosphereAltitude(0.15)
+        .customLayerData(artData)
+        .customThreeObject(() => new THREE.Mesh(
+          new THREE.SphereGeometry(0.4),
+          new THREE.MeshBasicMaterial({ color: 0x00f2ff })
+        ))
+        .customThreeObjectUpdate((obj) => {
+          const s = 0.7 + Math.abs(Math.sin(Date.now() * 0.002 + Math.random()));
+          obj.scale.set(s, s, s);
+        });
+
+      world.controls().autoRotate = true;
+      world.controls().autoRotateSpeed = 1.0;
+      world.pointOfView({ lat: 37, lng: 127, altitude: 2.5 });
+
+      world.onGlobeReady(() => {
+        const scene = world.scene();
+        const sun = new THREE.DirectionalLight(0xffffff, 3.0);
+        sun.position.set(1, 1, 1);
+        scene.add(sun);
+
+        new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-night.jpg', tex => {
+          const mat = world.globeMaterial();
+          mat.emissiveMap = tex;
+          mat.emissive = new THREE.Color(0xffeeba);
+          mat.emissiveIntensity = 2.0;
+        });
       });
 
-    world.controls().autoRotate = true;
-    world.controls().autoRotateSpeed = 1.0;
+      window.onresize = () => world.width(window.innerWidth).height(window.innerHeight);
+    }
 
-    // 조명 및 야간 텍스처 (로딩 완료 후 실행)
-    world.onGlobeReady(() => {
-      const scene = world.scene();
-      
-      // 태양광
-      const sun = new THREE.DirectionalLight(0xffffff, 3.0);
-      sun.position.set(1, 1, 1);
-      scene.add(sun);
-
-      // 야간 텍스처
-      new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-night.jpg', tex => {
-        const mat = world.globeMaterial();
-        mat.emissiveMap = tex;
-        mat.emissive = new THREE.Color(0xffeeba);
-        mat.emissiveIntensity = 2.0;
-      });
-    });
-
-    // 리사이즈 대응
-    window.onresize = () => world.width(window.innerWidth).height(window.innerHeight);
+    // 3. 브라우저 캐시 문제를 피하기 위해 약간의 지연 후 실행
+    setTimeout(startGlobe, 500);
   </script>
 </body>
 </html>
