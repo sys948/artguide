@@ -80,11 +80,11 @@
 
   <div id="globeViz"></div>
 
-  <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/globe.gl@2.31.1/dist/globe.gl.min.js"></script>
+  <script src="https://unpkg.com/three"></script>
+  <script src="https://unpkg.com/globe.gl"></script>
 
   <script>
-    // 1. 미술관 데이터 세팅 (1000개)
+    // 1. 1000개의 미술관 데이터 세팅 (실제 주요 6개 + 가상 994개)
     const artSpaces = [
       { name: "국립현대미술관 (MMCA)", city: "Seoul", lat: 37.582, lng: 126.982, desc: "한국 현대미술의 중심지" },
       { name: "모리 미술관", city: "Tokyo", lat: 35.660, lng: 139.729, desc: "롯폰기 힐즈의 현대미술관" },
@@ -98,57 +98,67 @@
       artSpaces.push({
         name: `글로벌 아트 스페이스 #${i}`,
         city: "Global Hub",
-        lat: (Math.random() - 0.5) * 140, 
+        lat: (Math.random() - 0.5) * 140, // 남극 북극 제외
         lng: (Math.random() - 0.5) * 360,
         desc: "세계 곳곳에 숨겨진 예술 거점"
       });
     }
 
-    // 2. 통합 재질(Material) 생성: 처음부터 주간/야간 맵을 한 번에 세팅
-    const textureLoader = new THREE.TextureLoader();
-    const globeMat = new THREE.MeshPhongMaterial({
-      map: textureLoader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg'),
-      bumpMap: textureLoader.load('https://unpkg.com/three-globe/example/img/earth-topology.png'),
-      bumpScale: 0.8,
-      emissiveMap: textureLoader.load('https://unpkg.com/three-globe/example/img/earth-night.jpg'),
-      emissive: new THREE.Color(0xffeeba), // 야간 맵 불빛 색상
-      emissiveIntensity: 1.5,
-      shininess: 15
-    });
+    // 2. 안전하고 아름다운 '발광하는 사이언 별' 텍스처를 코드로 직접 그립니다 (이미지 로딩 에러 원천차단)
+    const canvas = document.createElement('canvas');
+    canvas.width = 32; 
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    
+    // 네온사인 같은 빛 번짐 효과 (Radial Gradient)
+    const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)'); // 중심은 흰색
+    gradient.addColorStop(0.2, 'rgba(0, 242, 255, 1)'); // 사이언 색상
+    gradient.addColorStop(1, 'rgba(0, 242, 255, 0)');   // 외곽은 투명
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 32, 32);
 
-    // 3. 반짝이는 별 텍스처 (Base64로 인코딩하여 로딩 에러 원천 차단)
-    const starBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAHBJREFUWEft1sENwCAQw8Dsv2mHwkyVJkigffIjsQ+b2c0REREREREfM7u1Oed1rXWe4xjnBGA/z/OcmZl3P81AAM92mJmBAK5uIIA+AwH0GQigz0AAfQYC6DMQQJ+BAPoMBBB2v+s2N0REREREREQHc15r+32v4+IAAAAASUVORK5CYII=";
+    const starTexture = new THREE.CanvasTexture(canvas);
     const starMaterial = new THREE.SpriteMaterial({ 
-      map: textureLoader.load(starBase64),
-      color: 0x00f2ff, 
+      map: starTexture,
+      color: 0xffffff, 
       transparent: true, 
-      blending: THREE.AdditiveBlending 
+      blending: THREE.AdditiveBlending // 겹치면 더 밝게 빛나는 효과
     });
 
-    // 4. 지구본 초기화
+    // 3. 지구본 초기화
     const world = Globe()(document.getElementById('globeViz'))
-      .globeMaterial(globeMat) // 미리 세팅한 안전한 재질 바로 적용
+      .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+      .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
       .showAtmosphere(true)
       .atmosphereColor('#00f2ff')
       .atmosphereAltitude(0.15)
+      
+      // 1000개의 별 레이어 추가
       .customLayerData(artSpaces)
       .customThreeObject(d => {
         const sprite = new THREE.Sprite(starMaterial);
+        // 지구 표면보다 살짝 띄워서 파묻히지 않게 (0.015)
         const coords = world.getCoords(d.lat, d.lng, 0.015);
         sprite.position.set(coords.x, coords.y, coords.z);
+        
+        // 반짝임 속도와 크기를 무작위로 부여
         sprite.userData = {
           phase: Math.random() * Math.PI * 2,
-          speed: 0.03 + Math.random() * 0.05,
-          baseScale: 1.2 + Math.random() * 1.5
+          speed: 0.02 + Math.random() * 0.05,
+          baseScale: 0.8 + Math.random() * 1.2
         };
         return sprite;
       })
-      .customThreeObjectUpdate(obj => {
+      .customThreeObjectUpdate((obj) => {
+        // 애니메이션 루프: 크기가 커졌다 작아졌다 하며 반짝이는 효과
         if (!obj || !obj.userData) return;
         obj.userData.phase += obj.userData.speed;
-        const scale = obj.userData.baseScale * (0.5 + 0.5 * Math.sin(obj.userData.phase));
+        const scale = obj.userData.baseScale * (0.4 + 0.6 * Math.sin(obj.userData.phase));
         obj.scale.set(scale, scale, 1);
       })
+      // 툴팁 및 호버 시 회전 멈춤
       .customLayerLabel(d => `
         <div class="tooltip-content">
           <b>${d.name}</b>
@@ -160,25 +170,26 @@
         document.body.style.cursor = point ? 'pointer' : 'default';
       });
 
+    // 카메라 및 컨트롤 세팅
     world.controls().autoRotate = true;
     world.controls().autoRotateSpeed = 1.0;
     world.pointOfView({ lat: 37.5, lng: 126.9, altitude: 2.5 });
 
-    // 5. 안전한 조명 컨트롤
+    // 4. [가장 중요한 안전 장치] 지구본 생성이 끝난 후 조명과 야간 텍스처를 덮어씌웁니다.
     world.onGlobeReady(() => {
       const scene = world.scene();
       const camera = world.camera();
 
-      // 기본 조명 어둡게 설정 (야간 불빛을 돋보이게 함)
-      if (camera.children) {
+      // (1) 기존에 방해되는 조명 끄기 (에러 방지를 위해 삭제하지 않고 밝기만 0으로)
+      if (camera && camera.children) {
         camera.children.forEach(c => { if (c.isLight) c.intensity = 0; });
       }
-      scene.children.forEach(c => {
-        if (c.isLight && c.type === 'AmbientLight') c.intensity = 0.05;
-      });
+      if (scene && scene.children) {
+        scene.children.forEach(c => { if (c.isLight && c.type === 'AmbientLight') c.intensity = 0.02; });
+      }
 
-      // 태양광 세팅
-      const sunLight = new THREE.DirectionalLight(0xffffff, 2.5); 
+      // (2) 실시간 태양광(DirectionalLight) 추가
+      const sunLight = new THREE.DirectionalLight(0xffffff, 3.0); 
       scene.add(sunLight);
 
       function updateSunPosition() {
@@ -202,10 +213,20 @@
       }
       
       updateSunPosition();
-      setInterval(updateSunPosition, 60000);
+      setInterval(updateSunPosition, 60000); // 1분마다 태양 위치 업데이트
+
+      // (3) 야간 도시 불빛(City Lights) 적용
+      // 비동기로 안전하게 불러온 뒤, globeMaterial의 속성에 주입합니다.
+      new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-night.jpg', (texture) => {
+        const mat = world.globeMaterial();
+        mat.emissiveMap = texture;
+        mat.emissive = new THREE.Color(0xfff5cc); // 연한 노란색 불빛
+        mat.emissiveIntensity = 2.0; // 불빛 강도
+        mat.needsUpdate = true; // 그래픽 엔진에 텍스처 변경을 알림
+      });
     });
 
-    // 6. 국제 날짜/시간 시계 패널
+    // 5. 국제 날짜/시간 시계 패널 로직
     let currentTimeZone = 'Asia/Seoul';
     const tabs = document.querySelectorAll('.tab');
     const dateDisplay = document.getElementById('time-date');
@@ -229,8 +250,9 @@
     }
 
     setInterval(updateClock, 1000);
-    updateClock(); 
+    updateClock(); // 즉시 실행
 
+    // 반응형 리사이즈
     window.addEventListener('resize', () => {
       world.width(window.innerWidth).height(window.innerHeight);
     });
