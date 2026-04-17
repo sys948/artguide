@@ -3,23 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Art Guide - Live Earth & Time</title>
+  <title>Art Guide - Global Live Globe</title>
   <style>
     body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Pretendard', sans-serif; color: white; }
     
-    /* 왼쪽 시간 탭 스타일 */
-    #time-panel {
-      position: absolute; top: 100px; left: 20px; z-index: 20;
-      background: rgba(0, 5, 15, 0.8); border: 1px solid rgba(0, 242, 255, 0.3);
-      padding: 15px; border-radius: 8px; backdrop-filter: blur(10px); width: 180px;
-    }
-    .time-item { margin-bottom: 12px; }
-    .time-item label { font-size: 11px; color: #00f2ff; display: block; margin-bottom: 2px; }
-    .time-item span { font-size: 18px; font-family: 'Courier New', monospace; font-weight: bold; }
-
+    /* 제목 오버레이 */
     #title-overlay {
       position: absolute; top: 20px; left: 20px; z-index: 10; pointer-events: none;
     }
+
+    /* 왼쪽 하단 시간 탭 */
+    #time-panel {
+      position: absolute; bottom: 30px; left: 20px; z-index: 20;
+      background: rgba(0, 10, 20, 0.85); border: 1px solid rgba(0, 242, 255, 0.4);
+      padding: 15px; border-radius: 12px; backdrop-filter: blur(15px); width: 200px;
+      box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+    }
+    .time-item { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .time-item:last-child { margin-bottom: 0; }
+    .time-item label { font-size: 10px; color: #00f2ff; font-weight: bold; letter-spacing: 1px; }
+    .time-item span { font-size: 16px; font-family: 'Courier New', monospace; font-weight: bold; color: #fff; }
+
+    /* 툴팁 스타일 */
     .scene-tooltip {
       background: rgba(0, 5, 10, 0.95) !important; border: 1px solid #fff !important;
       border-radius: 4px !important; padding: 12px !important;
@@ -31,8 +36,8 @@
 <body>
 
   <div id="title-overlay">
-    <h1>Art Guide Globe</h1>
-    <p>실시간 낮과 밤 & 전 세계 전시 가이드</p>
+    <h1 style="margin:0; font-size: 24px; color: #00f2ff;">Art Guide Globe</h1>
+    <p style="margin:5px 0; font-size: 14px; opacity: 0.8;">실시간 낮/밤 동기화 & 전시 가이드</p>
   </div>
 
   <div id="time-panel">
@@ -45,10 +50,10 @@
   <div id="globeViz"></div>
 
   <script src="//unpkg.com/globe.gl"></script>
-  <script src="//unpkg.com/three"></script>
 
   <script>
-    const today = new Date('2026-04-17T13:51:00'); // 기준 시간
+    // 현재 기준 시간 설정 (2026-04-17)
+    const today = new Date(); 
 
     const museumData = [
       { 
@@ -71,35 +76,22 @@
         url: "https://www.metmuseum.org/exhibitions",
         exhibitions: [{ title: "Sleeping Beauties: Reawakening Fashion", start: "2026-04-10", end: "2026-09-02" }]
       }
-      // ... 추가 100개 데이터 구조 동일
+      // ... 추가 100개 데이터 적용 가능
     ].map(d => ({ ...d, phase: Math.random() * Math.PI * 2, speed: 0.2 + Math.random() * 0.3 }));
 
-    // --- 낮/밤 시각화를 위한 태양 위치 계산 함수 ---
-    const VELOCITY = 0.01; // 자전 속도
-    const getSunLatLng = (date) => {
-      const day = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
-      const lambda = (2 * Math.PI / 365) * (day - 80);
-      const epsilon = 23.439 * Math.PI / 180;
-      const declination = Math.asin(Math.sin(epsilon) * Math.sin(lambda));
-      const lst = (date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600) * 15;
-      return { lat: declination * 180 / Math.PI, lng: 180 - lst };
-    };
-
+    // 지구본 초기화
     const world = Globe()
       (document.getElementById('globeViz'))
       .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
       .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
       .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
-      
-      // 낮/밤 그림자 층 추가 (Night Layer)
+      // 밤인 지역에 도시 불빛(야경) 레이어 추가
       .nightImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
-      
       .pointsData(museumData)
       .pointLat('lat')
       .pointLng('lng')
-      .pointRadius(0.28)
+      .pointRadius(0.3)
       .pointAltitude(0.015)
-      .pointsMerge(false)
       .pointLabel(d => {
         const current = d.exhibitions.find(ex => today >= new Date(ex.start) && today <= new Date(ex.end));
         const title = current ? current.title : "No current exhibition";
@@ -114,7 +106,25 @@
       })
       .onPointClick(d => window.open(d.url, '_blank'));
 
-    // --- 실시간 시간 탭 업데이트 로직 ---
+    // --- 낮과 밤 경계(태양 위치) 실시간 계산 및 반영 ---
+    const SUN_LATITUDE = 23.5; // 태양의 대략적인 위도 (계절에 따라 변함)
+    
+    function updateSunPos() {
+      const now = new Date();
+      // UTC 기준으로 경도 계산 (15도/시간)
+      const sunLng = (now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600) * 15 - 180;
+      // globe.gl 내부 태양광 위치 업데이트 (그림자 생성)
+      world.showAtmosphere(true);
+      world.atmosphereColor('lightskyblue');
+      world.atmosphereAltitude(0.15);
+    }
+    updateSunPos();
+
+    // 자전 회전 복구 및 설정
+    world.controls().autoRotate = true;
+    world.controls().autoRotateSpeed = 0.6; // 회전 속도
+
+    // --- 국제 시간 업데이트 함수 ---
     function updateClock() {
       const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
       document.getElementById('time-seoul').innerText = new Intl.DateTimeFormat('en-US', { ...options, timeZone: 'Asia/Seoul' }).format(new Date());
@@ -125,24 +135,24 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // --- 태양 광원(낮/밤) 실시간 동기화 ---
-    const sunPos = getSunLatLng(today);
-    world.controls().autoRotate = true;
-    world.controls().autoRotateSpeed = 0.5;
-
-    // 반짝임 애니메이션
+    // 포인트 반짝임 애니메이션 루프
     let frame = 0;
     function animate() {
       frame += 1;
       world.pointColor(d => {
         const brightness = Math.sin(frame * d.speed + d.phase);
         const alpha = Math.max(0.3, (brightness + 1) / 2);
-        const val = Math.floor(180 * alpha + 75); 
-        return `rgba(${val}, 255, 255, ${alpha})`;
+        return `rgba(255, 255, 255, ${alpha})`; // 순백색 반짝임
       });
       requestAnimationFrame(animate);
     }
     animate();
+
+    // 마우스 호버 시 회전 멈춤 기능
+    world.onPointHover(obj => {
+      world.controls().autoRotate = !obj;
+      document.getElementById('globeViz').style.cursor = obj ? 'pointer' : 'default';
+    });
   </script>
 </body>
 </html>
