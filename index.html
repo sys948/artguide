@@ -3,26 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Art Guide - Live Globe</title>
+  <title>Art Guide - Live Earth & Exhibitions</title>
+  
+  <script src="https://unpkg.com/three@0.150.1/build/three.min.js"></script>
+  <script src="https://unpkg.com/globe.gl@2.30.0/dist/globe.gl.min.js"></script>
+
   <style>
     body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Pretendard', sans-serif; color: white; }
+    
+    /* 제목 */
     #title-overlay { position: absolute; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
+    
+    /* 왼쪽 하단 시간 탭 */
     #time-panel {
       position: absolute; bottom: 30px; left: 20px; z-index: 100;
-      background: rgba(0, 10, 20, 0.85); border: 1px solid rgba(0, 242, 255, 0.5);
-      padding: 15px; border-radius: 12px; backdrop-filter: blur(15px); width: 200px;
+      background: rgba(0, 10, 20, 0.85); border: 1px solid rgba(0, 242, 255, 0.4);
+      padding: 15px; border-radius: 12px; backdrop-filter: blur(10px); width: 200px;
     }
     .time-item { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-    .time-item label { font-size: 10px; color: #00f2ff; font-weight: bold; }
+    .time-item label { font-size: 11px; color: #00f2ff; font-weight: bold; letter-spacing: 1px; }
     .time-item span { font-size: 16px; font-family: 'Courier New', monospace; font-weight: bold; }
-    .scene-tooltip { background: rgba(0, 5, 10, 0.95) !important; border: 1px solid #fff !important; padding: 10px; color: white; border-radius: 4px; }
+
+    /* 팝업 툴팁 */
+    .scene-tooltip { background: rgba(0, 5, 10, 0.95) !important; border: 1px solid #fff !important; padding: 12px; border-radius: 6px; color: white; }
+    .tooltip-content b { font-size: 16px; color: #00f2ff; display: block; margin-bottom: 5px; }
   </style>
 </head>
 <body>
 
   <div id="title-overlay">
     <h1 style="margin:0; font-size: 22px; color: #00f2ff;">Art Guide Globe</h1>
-    <p style="margin:5px 0; font-size: 12px; opacity: 0.7;">실시간 낮/밤 경계 & 전시 정보</p>
+    <p style="margin:5px 0; font-size: 12px; opacity: 0.8;">실시간 낮/밤 동기화 & 글로벌 전시 가이드</p>
   </div>
 
   <div id="time-panel">
@@ -34,78 +45,85 @@
 
   <div id="globeViz"></div>
 
-  <script src="//unpkg.com/globe.gl"></script>
-
   <script>
-    // 1. 데이터 정의
-    const today = new Date();
+    const today = new Date(); // 접속한 사용자의 현재 날짜/시간
+
+    // 1. 전시 데이터 (날짜 필터링 포함)
     const museumData = [
       { name: "국립현대미술관 서울", lat: 37.5791, lng: 126.9805, url: "https://www.mmca.go.kr/exhibitions/progressList.do", exhibitions: [{ title: "Connecting Bodies: Asian Women Artists", start: "2025-09-03", end: "2026-05-10" }] },
       { name: "테이트 모던", lat: 51.5076, lng: -0.0994, url: "https://www.tate.org.uk/whats-on/tate-modern/exhibition/tracey-emin", exhibitions: [{ title: "Tracey Emin: Use Me", start: "2026-03-10", end: "2026-08-30" }] },
       { name: "루브르 박물관", lat: 48.8606, lng: 2.3376, url: "https://www.louvre.fr/en/exhibitions-and-events/exhibitions/michelangelo-and-rodin", exhibitions: [{ title: "Michelangelo and Rodin: Living bodies", start: "2026-04-15", end: "2026-07-20" }] },
       { name: "퐁피두 센터", lat: 48.8606, lng: 2.3522, url: "https://www.centrepompidou.fr/en/program/calendar?dateType=today", exhibitions: [{ title: "Matisse: The Red Studio", start: "2026-03-01", end: "2026-06-15" }] },
       { name: "메트로폴리탄 미술관", lat: 40.7794, lng: -73.9632, url: "https://www.metmuseum.org/exhibitions", exhibitions: [{ title: "Sleeping Beauties: Reawakening Fashion", start: "2026-04-10", end: "2026-09-02" }] }
-    ].map(d => ({ ...d, phase: Math.random() * Math.PI * 2, speed: 0.002 + Math.random() * 0.003 }));
+    ];
 
-    // 2. 라이브러리 로드 대기 후 초기화
-    window.onload = () => {
-      const world = Globe()
-        (document.getElementById('globeViz'))
-        .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-        .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
-        .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
-        .nightImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
-        .pointsData(museumData)
-        .pointLat('lat')
-        .pointLng('lng')
-        .pointRadius(0.4)
-        .pointAltitude(0.02)
-        .pointColor(() => 'white')
-        .pointLabel(d => {
-          const cur = d.exhibitions.find(ex => today >= new Date(ex.start) && today <= new Date(ex.end));
-          return `<div class="scene-tooltip"><b>${d.name}</b><br><small>${cur ? cur.title : 'Check Website'}</small></div>`;
-        })
-        .onPointClick(d => window.open(d.url, '_blank'));
+    // 2. 지구본 렌더링
+    const world = Globe()
+      (document.getElementById('globeViz'))
+      .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+      .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+      .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+      .nightImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+      .pointsData(museumData)
+      .pointLat('lat')
+      .pointLng('lng')
+      .pointColor(() => '#ffffff') // 멈춤 현상 방지를 위해 순백색으로 고정
+      .pointRadius(0.35)
+      .pointAltitude(0.02)
+      .pointLabel(d => {
+        const cur = d.exhibitions.find(ex => today >= new Date(ex.start) && today <= new Date(ex.end));
+        return `<div class="scene-tooltip"><b>${d.name}</b><br><small>${cur ? cur.title : 'Check Website'}</small></div>`;
+      })
+      .onPointClick(d => window.open(d.url, '_blank'));
 
-      // --- 광원 및 자전 설정 ---
-      const scene = world.scene();
-      const THREE = window.THREE || world.__threeObj; // 엔진 객체 확보
+    // 자동 회전 설정
+    world.controls().autoRotate = true;
+    world.controls().autoRotateSpeed = 0.5;
+    world.onPointHover(obj => { world.controls().autoRotate = !obj; });
 
-      // 기존 광원 제거 및 태양광 설정
-      const sunLight = new THREE.DirectionalLight(0xffffff, 3.5);
-      scene.add(sunLight);
-      scene.add(new THREE.AmbientLight(0xbbbbbb, 0.3)); // 밤인 지역도 아주 살짝 보이게
-
-      function updateCycle() {
-        const now = new Date();
-        
-        // 시간 탭 업데이트
-        const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-        ['Asia/Seoul', 'Europe/London', 'America/New_York', 'Europe/Paris'].forEach((tz, i) => {
-          const id = ['seoul', 'london', 'newyork', 'paris'][i];
-          const el = document.getElementById(`time-${id}`);
-          if(el) el.innerText = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: tz }).format(now);
-        });
-
-        // 태양 위치 업데이트 (현재 시간에 맞게 낮/밤 경계 회전)
-        const lon = (now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600) * 15 - 180;
-        const rad = (lon + 90) * Math.PI / 180;
-        sunLight.position.set(Math.cos(rad) * 10, 1, Math.sin(rad) * 10);
-
-        // 점 반짝임
-        world.pointColor(d => {
-          const alpha = Math.max(0.3, (Math.sin(Date.now() * d.speed + d.phase) + 1) / 2);
-          return `rgba(255, 255, 255, ${alpha})`;
-        });
-
-        requestAnimationFrame(updateCycle);
-      }
-
-      world.controls().autoRotate = true;
-      world.controls().autoRotateSpeed = 0.5;
+    // 3. 독립적인 실시간 시계 로직 (에러가 나도 시계는 돌아가도록 분리)
+    function updateTime() {
+      const now = new Date();
+      const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
       
-      updateCycle();
-    };
+      try {
+        document.getElementById('time-seoul').innerText = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: 'Asia/Seoul' }).format(now);
+        document.getElementById('time-london').innerText = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: 'Europe/London' }).format(now);
+        document.getElementById('time-newyork').innerText = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: 'America/New_York' }).format(now);
+        document.getElementById('time-paris').innerText = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: 'Europe/Paris' }).format(now);
+      } catch (e) { console.error("Time update error:", e); }
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+
+    // 4. 실시간 태양 광원(낮/밤) 분리 로직
+    setTimeout(() => {
+      const scene = world.scene();
+      const camera = world.camera();
+      
+      // 카메라에 고정된 기본 광원을 떼어내서 씬(Scene)에 고정
+      const defaultLight = camera.children.find(c => c.type === 'DirectionalLight');
+      if (defaultLight) {
+        camera.remove(defaultLight);
+        scene.add(defaultLight);
+        defaultLight.intensity = 3; // 태양빛 강도 조절
+      }
+      
+      scene.add(new THREE.AmbientLight(0x222222)); // 밤 부분 살짝 밝혀주기
+
+      // 태양 위치 실시간 업데이트
+      setInterval(() => {
+        const now = new Date();
+        // UTC 시간 기준으로 현재 태양의 경도(Longitude) 계산
+        const sunLng = -((now.getUTCHours() + now.getUTCMinutes() / 60) * 15 - 180);
+        const rad = sunLng * Math.PI / 180;
+        
+        if (defaultLight) {
+          // 지구본 주위를 도는 태양 위치 설정
+          defaultLight.position.set(Math.cos(rad) * 100, 0, Math.sin(rad) * 100);
+        }
+      }, 1000); // 1초마다 태양 위치 갱신
+    }, 1000); // 라이브러리 초기화 대기
   </script>
 </body>
 </html>
