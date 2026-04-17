@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Art Guide - Global 1000 Art Spaces</title>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  
   <style>
-    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-    
     body { 
       margin: 0; 
       background-color: #000000; 
@@ -14,6 +15,17 @@
       font-family: 'Pretendard', sans-serif; 
     }
     
+    /* [핵심 해결] 3D 캔버스가 그려질 공간의 크기를 강제로 브라우저 화면 100%로 고정합니다. */
+    #globeViz {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1; 
+    }
+
+    /* UI 요소들은 지구본 위(z-index: 10)에 배치되도록 설정합니다. */
     #title-overlay {
       position: absolute; 
       top: 30px; 
@@ -56,6 +68,7 @@
   </style>
 </head>
 <body>
+  
   <div id="title-overlay">
     <h1>Art Guide Globe</h1>
     <p>실시간 1000대 미술관 가이드 (2026. 04. 17.)</p>
@@ -84,149 +97,148 @@
   <script src="https://unpkg.com/globe.gl"></script>
 
   <script>
-    // 1. 1000개의 미술관 데이터 세팅 (실제 주요 6개 + 가상 994개)
-    const artSpaces = [
-      { name: "국립현대미술관 (MMCA)", city: "Seoul", lat: 37.582, lng: 126.982, desc: "한국 현대미술의 중심지" },
-      { name: "모리 미술관", city: "Tokyo", lat: 35.660, lng: 139.729, desc: "롯폰기 힐즈의 현대미술관" },
-      { name: "LACMA", city: "LA", lat: 34.063, lng: -118.359, desc: "미국 서부 최대 규모의 미술관" },
-      { name: "MoMA", city: "New York", lat: 40.761, lng: -73.977, desc: "세계 최고의 현대미술 컬렉션" },
-      { name: "테이트 모던", city: "London", lat: 51.507, lng: -0.099, desc: "발전소를 개조한 현대미술관" },
-      { name: "루브르 박물관", city: "Paris", lat: 48.860, lng: 2.337, desc: "세계 3대 박물관 중 하나" }
-    ];
+    // 모든 3D 로직을 에러 캐치(try-catch)로 감싸서, 일부 실패해도 하얀 화면이 뜨지 않도록 방어합니다.
+    try {
+      // 1. 미술관 데이터 1000개 세팅 (기존 6개 + 랜덤 994개)
+      const artSpaces = [
+        { name: "국립현대미술관 (MMCA)", city: "Seoul", lat: 37.582, lng: 126.982, desc: "한국 현대미술의 중심지" },
+        { name: "모리 미술관", city: "Tokyo", lat: 35.660, lng: 139.729, desc: "롯폰기 힐즈의 현대미술관" },
+        { name: "LACMA", city: "LA", lat: 34.063, lng: -118.359, desc: "미국 서부 최대 규모의 미술관" },
+        { name: "MoMA", city: "New York", lat: 40.761, lng: -73.977, desc: "세계 최고의 현대미술 컬렉션" },
+        { name: "테이트 모던", city: "London", lat: 51.507, lng: -0.099, desc: "발전소를 개조한 현대미술관" },
+        { name: "루브르 박물관", city: "Paris", lat: 48.860, lng: 2.337, desc: "세계 3대 박물관 중 하나" }
+      ];
 
-    for (let i = 1; i <= 994; i++) {
-      artSpaces.push({
-        name: `글로벌 아트 스페이스 #${i}`,
-        city: "Global Hub",
-        lat: (Math.random() - 0.5) * 140, // 남극 북극 제외
-        lng: (Math.random() - 0.5) * 360,
-        desc: "세계 곳곳에 숨겨진 예술 거점"
+      for (let i = 1; i <= 994; i++) {
+        artSpaces.push({
+          name: `글로벌 아트 스페이스 #${i}`,
+          city: "Global Hub",
+          lat: (Math.random() - 0.5) * 160, 
+          lng: (Math.random() - 0.5) * 360,
+          desc: "세계 곳곳에 숨겨진 예술 거점"
+        });
+      }
+
+      // 2. 다이아몬드(별) 모양의 기하학 구조와 색상 세팅 (에러 없는 100% 순수 코드 방식)
+      const starGeo = new THREE.OctahedronGeometry(0.5, 0); 
+      const starMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff });
+
+      // 3. 지구본 렌더링 시작
+      const globeContainer = document.getElementById('globeViz');
+      const world = Globe()(globeContainer)
+        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+        .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+        .showAtmosphere(true)
+        .atmosphereColor('#00f2ff')
+        .atmosphereAltitude(0.15)
+        
+        // 1000개의 점 찍기
+        .customLayerData(artSpaces)
+        .customThreeObject(d => {
+          const mesh = new THREE.Mesh(starGeo, starMat);
+          const coords = world.getCoords(d.lat, d.lng, 0.015);
+          mesh.position.set(coords.x, coords.y, coords.z);
+          mesh.lookAt(new THREE.Vector3(0,0,0)); // 별이 지구 밖을 향하게
+          
+          // 반짝임 속도 세팅
+          mesh.userData = {
+            phase: Math.random() * 100,
+            speed: 0.05 + Math.random() * 0.05,
+            baseScale: 0.8 + Math.random() * 1.2
+          };
+          return mesh;
+        })
+        .customThreeObjectUpdate(obj => {
+          if (!obj || !obj.userData) return;
+          obj.userData.phase += obj.userData.speed;
+          // 크기가 줄어들었다 커지며 반짝이도록 설정
+          const scale = obj.userData.baseScale * (0.3 + 0.7 * Math.abs(Math.sin(obj.userData.phase)));
+          obj.scale.set(scale, scale, scale);
+        })
+        .customLayerLabel(d => `
+          <div class="tooltip-content">
+            <b>${d.name}</b>
+            <div class="exhibit-info">도시: ${d.city}<br/>특징: ${d.desc}</div>
+          </div>
+        `)
+        .onCustomLayerHover(point => {
+          world.controls().autoRotate = !point;
+          document.body.style.cursor = point ? 'pointer' : 'default';
+        });
+
+      world.controls().autoRotate = true;
+      world.controls().autoRotateSpeed = 1.0;
+      world.pointOfView({ lat: 37.5, lng: 126.9, altitude: 2.5 });
+
+      // 4. 안전한 조명 및 야간 불빛 텍스처 처리
+      // 지구본이 완전히 준비된 후 1초 뒤에 조명과 야간 불빛을 씌워 충돌을 막습니다.
+      setTimeout(() => {
+        try {
+          const scene = world.scene();
+          const camera = world.camera();
+
+          // 기본 카메라 조명을 끕니다.
+          if (camera && camera.children) {
+            camera.children.forEach(c => { if (c.isLight) c.intensity = 0; });
+          }
+
+          // 커스텀 태양광을 추가합니다.
+          const sunLight = new THREE.DirectionalLight(0xffffff, 3.0); 
+          scene.add(sunLight);
+
+          function updateSunPosition() {
+            const now = new Date();
+            const start = new Date(now.getFullYear(), 0, 0);
+            const dayOfYear = Math.floor((now - start) / 86400000);
+            
+            const declination = -23.44 * Math.cos((360 / 365) * (dayOfYear + 10) * (Math.PI / 180));
+            const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+            const sunLng = 180 - (utcHours * 15);
+
+            const radius = 300; 
+            const phi = (90 - declination) * (Math.PI / 180);
+            const theta = (90 - sunLng) * (Math.PI / 180);
+
+            sunLight.position.set(
+              radius * Math.sin(phi) * Math.cos(theta),
+              radius * Math.cos(phi),
+              radius * Math.sin(phi) * Math.sin(theta)
+            );
+          }
+          
+          updateSunPosition();
+          setInterval(updateSunPosition, 60000);
+
+          // 야간 도시 불빛 적용 (에러 무시)
+          const mat = world.globeMaterial();
+          if (mat) {
+            new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-night.jpg', tex => {
+              mat.emissiveMap = tex;
+              mat.emissive = new THREE.Color(0xfff0aa);
+              mat.emissiveIntensity = 2.0;
+              mat.needsUpdate = true;
+            });
+          }
+        } catch(lightError) {
+          console.warn("조명 처리 중 무시 가능한 에러 발생", lightError);
+        }
+      }, 1500);
+
+      // 화면 리사이즈 대응
+      window.addEventListener('resize', () => {
+        if (world && globeContainer) {
+          world.width(globeContainer.clientWidth).height(globeContainer.clientHeight);
+        }
       });
+
+    } catch (e) {
+      console.error("지구본 렌더링 치명적 에러:", e);
+      // 에러가 발생해도 사이트가 멈춘 것처럼 보이지 않도록 콘솔에 로그를 남깁니다.
     }
 
-    // 2. 안전하고 아름다운 '발광하는 사이언 별' 텍스처를 코드로 직접 그립니다 (이미지 로딩 에러 원천차단)
-    const canvas = document.createElement('canvas');
-    canvas.width = 32; 
-    canvas.height = 32;
-    const ctx = canvas.getContext('2d');
-    
-    // 네온사인 같은 빛 번짐 효과 (Radial Gradient)
-    const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)'); // 중심은 흰색
-    gradient.addColorStop(0.2, 'rgba(0, 242, 255, 1)'); // 사이언 색상
-    gradient.addColorStop(1, 'rgba(0, 242, 255, 0)');   // 외곽은 투명
-    
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 32, 32);
-
-    const starTexture = new THREE.CanvasTexture(canvas);
-    const starMaterial = new THREE.SpriteMaterial({ 
-      map: starTexture,
-      color: 0xffffff, 
-      transparent: true, 
-      blending: THREE.AdditiveBlending // 겹치면 더 밝게 빛나는 효과
-    });
-
-    // 3. 지구본 초기화
-    const world = Globe()(document.getElementById('globeViz'))
-      .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-      .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
-      .showAtmosphere(true)
-      .atmosphereColor('#00f2ff')
-      .atmosphereAltitude(0.15)
-      
-      // 1000개의 별 레이어 추가
-      .customLayerData(artSpaces)
-      .customThreeObject(d => {
-        const sprite = new THREE.Sprite(starMaterial);
-        // 지구 표면보다 살짝 띄워서 파묻히지 않게 (0.015)
-        const coords = world.getCoords(d.lat, d.lng, 0.015);
-        sprite.position.set(coords.x, coords.y, coords.z);
-        
-        // 반짝임 속도와 크기를 무작위로 부여
-        sprite.userData = {
-          phase: Math.random() * Math.PI * 2,
-          speed: 0.02 + Math.random() * 0.05,
-          baseScale: 0.8 + Math.random() * 1.2
-        };
-        return sprite;
-      })
-      .customThreeObjectUpdate((obj) => {
-        // 애니메이션 루프: 크기가 커졌다 작아졌다 하며 반짝이는 효과
-        if (!obj || !obj.userData) return;
-        obj.userData.phase += obj.userData.speed;
-        const scale = obj.userData.baseScale * (0.4 + 0.6 * Math.sin(obj.userData.phase));
-        obj.scale.set(scale, scale, 1);
-      })
-      // 툴팁 및 호버 시 회전 멈춤
-      .customLayerLabel(d => `
-        <div class="tooltip-content">
-          <b>${d.name}</b>
-          <div class="exhibit-info">도시: ${d.city}<br/>특징: ${d.desc}</div>
-        </div>
-      `)
-      .onCustomLayerHover(point => {
-        world.controls().autoRotate = !point;
-        document.body.style.cursor = point ? 'pointer' : 'default';
-      });
-
-    // 카메라 및 컨트롤 세팅
-    world.controls().autoRotate = true;
-    world.controls().autoRotateSpeed = 1.0;
-    world.pointOfView({ lat: 37.5, lng: 126.9, altitude: 2.5 });
-
-    // 4. [가장 중요한 안전 장치] 지구본 생성이 끝난 후 조명과 야간 텍스처를 덮어씌웁니다.
-    world.onGlobeReady(() => {
-      const scene = world.scene();
-      const camera = world.camera();
-
-      // (1) 기존에 방해되는 조명 끄기 (에러 방지를 위해 삭제하지 않고 밝기만 0으로)
-      if (camera && camera.children) {
-        camera.children.forEach(c => { if (c.isLight) c.intensity = 0; });
-      }
-      if (scene && scene.children) {
-        scene.children.forEach(c => { if (c.isLight && c.type === 'AmbientLight') c.intensity = 0.02; });
-      }
-
-      // (2) 실시간 태양광(DirectionalLight) 추가
-      const sunLight = new THREE.DirectionalLight(0xffffff, 3.0); 
-      scene.add(sunLight);
-
-      function updateSunPosition() {
-        const now = new Date();
-        const start = new Date(now.getFullYear(), 0, 0);
-        const dayOfYear = Math.floor((now - start) / 86400000);
-        
-        const declination = -23.44 * Math.cos((360 / 365) * (dayOfYear + 10) * (Math.PI / 180));
-        const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
-        const sunLng = 180 - (utcHours * 15);
-
-        const radius = 300; 
-        const phi = (90 - declination) * (Math.PI / 180);
-        const theta = (90 - sunLng) * (Math.PI / 180);
-
-        sunLight.position.set(
-          radius * Math.sin(phi) * Math.cos(theta),
-          radius * Math.cos(phi),
-          radius * Math.sin(phi) * Math.sin(theta)
-        );
-      }
-      
-      updateSunPosition();
-      setInterval(updateSunPosition, 60000); // 1분마다 태양 위치 업데이트
-
-      // (3) 야간 도시 불빛(City Lights) 적용
-      // 비동기로 안전하게 불러온 뒤, globeMaterial의 속성에 주입합니다.
-      new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-night.jpg', (texture) => {
-        const mat = world.globeMaterial();
-        mat.emissiveMap = texture;
-        mat.emissive = new THREE.Color(0xfff5cc); // 연한 노란색 불빛
-        mat.emissiveIntensity = 2.0; // 불빛 강도
-        mat.needsUpdate = true; // 그래픽 엔진에 텍스처 변경을 알림
-      });
-    });
-
-    // 5. 국제 날짜/시간 시계 패널 로직
+    // ==========================================
+    // 5. 국제 시간 탭 로직 (3D와 분리하여 100% 작동 보장)
+    // ==========================================
     let currentTimeZone = 'Asia/Seoul';
     const tabs = document.querySelectorAll('.tab');
     const dateDisplay = document.getElementById('time-date');
@@ -242,20 +254,19 @@
     });
 
     function updateClock() {
-      const now = new Date();
-      const dateFormatter = new Intl.DateTimeFormat('ko-KR', { timeZone: currentTimeZone, year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-      const timeFormatter = new Intl.DateTimeFormat('en-US', { timeZone: currentTimeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-      dateDisplay.textContent = dateFormatter.format(now);
-      clockDisplay.textContent = timeFormatter.format(now);
+      try {
+        const now = new Date();
+        const dateFormatter = new Intl.DateTimeFormat('ko-KR', { timeZone: currentTimeZone, year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+        const timeFormatter = new Intl.DateTimeFormat('en-US', { timeZone: currentTimeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        dateDisplay.textContent = dateFormatter.format(now);
+        clockDisplay.textContent = timeFormatter.format(now);
+      } catch(err) {
+        dateDisplay.textContent = "시간 로드 오류";
+      }
     }
 
     setInterval(updateClock, 1000);
-    updateClock(); // 즉시 실행
-
-    // 반응형 리사이즈
-    window.addEventListener('resize', () => {
-      world.width(window.innerWidth).height(window.innerHeight);
-    });
+    updateClock(); 
   </script>
 </body>
 </html>
